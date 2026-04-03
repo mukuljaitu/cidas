@@ -1,0 +1,288 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Employee;
+use App\Models\Party;
+use App\Models\Role;
+use Illuminate\Http\Request;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
+
+class PartyController extends Controller
+{
+    private function salesmanRoleIds()
+    {
+        return Role::query()
+            ->whereRaw('LOWER(name) like ?', ['%salesman%'])
+            ->pluck('id');
+    }
+
+    private function salesmanEmployeeOptions($salesmanRoleIds)
+    {
+        $query = Employee::query()->orderBy('name');
+
+        if ($salesmanRoleIds->isNotEmpty()) {
+            $query->where(function ($q) use ($salesmanRoleIds) {
+                $q->whereIn('role_id', $salesmanRoleIds)
+                    ->orWhereHas('roles', function ($rq) use ($salesmanRoleIds) {
+                        $rq->whereIn('roles.id', $salesmanRoleIds);
+                    });
+            });
+        }
+
+        return $query->get(['id', 'name']);
+    }
+
+    public function index(Request $request)
+    {
+        $name = $request->string('name')->toString();
+        $status = $request->string('status')->toString();
+        $district = $request->string('district')->toString();
+        $state = $request->string('state')->toString();
+        $type = $request->string('type')->toString();
+        $missing = $request->boolean('missing');
+
+        $query = Party::query()->with('employee')->orderBy('id', 'desc');
+
+        if ($name !== '' && $name !== 'All') {
+            $query->where('name', $name);
+        }
+
+        if ($status !== '' && $status !== 'All') {
+            $query->where('status', $status);
+        }
+
+        if ($district !== '' && $district !== 'All') {
+            $query->where('district', $district);
+        }
+
+        if ($state !== '' && $state !== 'All') {
+            $query->where('state', $state);
+        }
+
+        if ($type !== '' && $type !== 'All') {
+            $query->where('party_type', $type);
+        }
+
+        if ($missing) {
+            $query->where(function ($q) {
+                $q->whereNull('owner_name')->orWhere('owner_name', '')
+                    ->orWhereNull('mobile')->orWhere('mobile', '')
+                    ->orWhereNull('gst_no')->orWhere('gst_no', '')
+                    ->orWhereNull('pan_no')->orWhere('pan_no', '')
+                    ->orWhereNull('bank_name')->orWhere('bank_name', '')
+                    ->orWhereNull('bank_account_no')->orWhere('bank_account_no', '');
+            });
+        }
+
+        $parties = $query->paginate($request->get('pageSize', 50))->withQueryString();
+
+        $names = Party::query()->select('name')->distinct()->orderBy('name')->pluck('name');
+        $statuses = Party::query()->select('status')->whereNotNull('status')->distinct()->orderBy('status')->pluck('status')->prepend('All');
+        $districts = Party::query()->select('district')->whereNotNull('district')->distinct()->orderBy('district')->pluck('district')->prepend('All');
+        $states = Party::query()->select('state')->whereNotNull('state')->distinct()->orderBy('state')->pluck('state')->prepend('All');
+        $types = Party::query()->select('party_type')->whereNotNull('party_type')->distinct()->orderBy('party_type')->pluck('party_type')->prepend('All');
+
+        $salesmanRoleIds = $this->salesmanRoleIds();
+        $employeeOptions = $this->salesmanEmployeeOptions($salesmanRoleIds);
+
+        return view('parties.index', compact('parties', 'names', 'statuses', 'districts', 'states', 'types', 'employeeOptions'));
+    }
+
+    public function store(Request $request)
+    {
+        $salesmanRoleIds = $this->salesmanRoleIds();
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'alias' => ['nullable', 'string', 'max:255'],
+            'mobile' => ['nullable', 'string', 'max:25'],
+            'gst_no' => ['nullable', 'string', 'max:32'],
+            'street_address' => ['nullable', 'string', 'max:2000'],
+            'city' => ['nullable', 'string', 'max:100'],
+            'district' => ['nullable', 'string', 'max:100'],
+            'state' => ['nullable', 'string', 'max:100'],
+            'pin_code' => ['nullable', 'string', 'max:20'],
+            'bank_name' => ['nullable', 'string', 'max:255'],
+            'bank_account_no' => ['nullable', 'string', 'max:255'],
+            'bank_ifsc' => ['nullable', 'string', 'max:32'],
+            'employee_id' => [
+                'required',
+                Rule::exists('employees', 'id')->where(function ($query) use ($salesmanRoleIds) {
+                    if ($salesmanRoleIds->isEmpty()) {
+                        return;
+                    }
+
+                    $query->where(function ($q) use ($salesmanRoleIds) {
+                        $q->whereIn('role_id', $salesmanRoleIds)
+                            ->orWhereExists(function ($sub) use ($salesmanRoleIds) {
+                                $sub->selectRaw('1')
+                                    ->from('employee_role')
+                                    ->whereColumn('employee_role.employee_id', 'employees.id')
+                                    ->whereIn('employee_role.role_id', $salesmanRoleIds);
+                            });
+                    });
+                }),
+            ],
+            'status' => ['nullable', 'string', 'max:50'],
+            'party_type' => ['nullable', 'string', 'max:100'],
+            'pan_no' => ['nullable', 'string', 'max:32'],
+            'aadhar_card' => ['nullable', 'string', 'max:32'],
+            'owner_name' => ['nullable', 'string', 'max:255'],
+            'pest_lic' => ['nullable', 'string', 'max:255'],
+            'fert_lic' => ['nullable', 'string', 'max:255'],
+            'seed_lic' => ['nullable', 'string', 'max:255'],
+            'cq1' => ['nullable', 'string', 'max:255'],
+            'cq2' => ['nullable', 'string', 'max:255'],
+            'stamp' => ['nullable', 'string', 'max:255'],
+            'sign' => ['nullable', 'string', 'max:255'],
+            'company_code' => ['nullable', 'string', 'max:255'],
+            'pic' => ['nullable', 'file', 'mimes:jpeg,png,jpg,pdf', 'max:2048'],
+        ]);
+
+        do {
+            $displayId = 'PRT-'.strtoupper(Str::random(6));
+        } while (Party::query()->where('display_id', $displayId)->exists());
+        $createdBy = optional($request->user())->email ?? 'system@local';
+
+        $picPath = null;
+        if ($request->hasFile('pic')) {
+            $picPath = $request->file('pic')->store('party_docs', 'public');
+        }
+
+        Party::create([
+            'display_id' => $displayId,
+            'company_code' => $validated['company_code'] ?? null,
+            'company_scope_id' => 1,
+            'name' => $validated['name'],
+            'alias' => $validated['alias'] ?? null,
+            'mobile' => $validated['mobile'] ?? null,
+            'gst_no' => $validated['gst_no'] ?? null,
+            'street_address' => $validated['street_address'] ?? null,
+            'city' => $validated['city'] ?? null,
+            'district' => $validated['district'] ?? null,
+            'state' => $validated['state'] ?? null,
+            'pin_code' => $validated['pin_code'] ?? null,
+            'bank_name' => $validated['bank_name'] ?? null,
+            'bank_account_no' => $validated['bank_account_no'] ?? null,
+            'bank_ifsc' => $validated['bank_ifsc'] ?? null,
+            'employee_id' => $validated['employee_id'],
+            'created_by_email' => $createdBy,
+            'status' => $validated['status'] ?? 'Active',
+            'party_type' => $validated['party_type'] ?? null,
+            'pan_no' => $validated['pan_no'] ?? null,
+            'aadhar_card' => $validated['aadhar_card'] ?? null,
+            'owner_name' => $validated['owner_name'] ?? null,
+            'pest_lic' => $validated['pest_lic'] ?? null,
+            'fert_lic' => $validated['fert_lic'] ?? null,
+            'seed_lic' => $validated['seed_lic'] ?? null,
+            'cq1' => $validated['cq1'] ?? null,
+            'cq2' => $validated['cq2'] ?? null,
+            'stamp' => $validated['stamp'] ?? null,
+            'sign' => $validated['sign'] ?? null,
+            'pic' => $picPath,
+        ]);
+
+        return redirect('/parties')->with('status', 'party-created');
+    }
+
+    public function update(Request $request, Party $party)
+    {
+        $salesmanRoleIds = $this->salesmanRoleIds();
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'alias' => ['nullable', 'string', 'max:255'],
+            'mobile' => ['nullable', 'string', 'max:25'],
+            'gst_no' => ['nullable', 'string', 'max:32'],
+            'street_address' => ['nullable', 'string', 'max:2000'],
+            'city' => ['nullable', 'string', 'max:100'],
+            'district' => ['nullable', 'string', 'max:100'],
+            'state' => ['nullable', 'string', 'max:100'],
+            'pin_code' => ['nullable', 'string', 'max:20'],
+            'bank_name' => ['nullable', 'string', 'max:255'],
+            'bank_account_no' => ['nullable', 'string', 'max:255'],
+            'bank_ifsc' => ['nullable', 'string', 'max:32'],
+            'employee_id' => [
+                'required',
+                Rule::exists('employees', 'id')->where(function ($query) use ($salesmanRoleIds) {
+                    if ($salesmanRoleIds->isEmpty()) {
+                        return;
+                    }
+
+                    $query->where(function ($q) use ($salesmanRoleIds) {
+                        $q->whereIn('role_id', $salesmanRoleIds)
+                            ->orWhereExists(function ($sub) use ($salesmanRoleIds) {
+                                $sub->selectRaw('1')
+                                    ->from('employee_role')
+                                    ->whereColumn('employee_role.employee_id', 'employees.id')
+                                    ->whereIn('employee_role.role_id', $salesmanRoleIds);
+                            });
+                    });
+                }),
+            ],
+            'status' => ['nullable', 'string', 'max:50'],
+            'party_type' => ['nullable', 'string', 'max:100'],
+            'pan_no' => ['nullable', 'string', 'max:32'],
+            'aadhar_card' => ['nullable', 'string', 'max:32'],
+            'owner_name' => ['nullable', 'string', 'max:255'],
+            'pest_lic' => ['nullable', 'string', 'max:255'],
+            'fert_lic' => ['nullable', 'string', 'max:255'],
+            'seed_lic' => ['nullable', 'string', 'max:255'],
+            'cq1' => ['nullable', 'string', 'max:255'],
+            'cq2' => ['nullable', 'string', 'max:255'],
+            'stamp' => ['nullable', 'string', 'max:255'],
+            'sign' => ['nullable', 'string', 'max:255'],
+            'company_code' => ['nullable', 'string', 'max:255'],
+            'pic' => ['nullable', 'file', 'mimes:jpeg,png,jpg,pdf', 'max:2048'],
+        ]);
+
+        $picPath = $party->pic;
+        if ($request->hasFile('pic')) {
+            if ($picPath) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($picPath);
+            }
+            $picPath = $request->file('pic')->store('party_docs', 'public');
+        }
+
+        $party->update([
+            'name' => $validated['name'],
+            'company_code' => $validated['company_code'] ?? $party->company_code,
+            'alias' => $validated['alias'] ?? null,
+            'mobile' => $validated['mobile'] ?? null,
+            'gst_no' => $validated['gst_no'] ?? null,
+            'street_address' => $validated['street_address'] ?? null,
+            'city' => $validated['city'] ?? null,
+            'district' => $validated['district'] ?? null,
+            'state' => $validated['state'] ?? null,
+            'pin_code' => $validated['pin_code'] ?? null,
+            'bank_name' => $validated['bank_name'] ?? null,
+            'bank_account_no' => $validated['bank_account_no'] ?? null,
+            'bank_ifsc' => $validated['bank_ifsc'] ?? null,
+            'employee_id' => $validated['employee_id'],
+            'status' => $validated['status'] ?? $party->status,
+            'party_type' => $validated['party_type'] ?? null,
+            'pan_no' => $validated['pan_no'] ?? null,
+            'aadhar_card' => $validated['aadhar_card'] ?? null,
+            'owner_name' => $validated['owner_name'] ?? null,
+            'pest_lic' => $validated['pest_lic'] ?? null,
+            'fert_lic' => $validated['fert_lic'] ?? null,
+            'seed_lic' => $validated['seed_lic'] ?? null,
+            'cq1' => $validated['cq1'] ?? null,
+            'cq2' => $validated['cq2'] ?? null,
+            'stamp' => $validated['stamp'] ?? null,
+            'sign' => $validated['sign'] ?? null,
+            'pic' => $picPath,
+        ]);
+
+        return redirect('/parties')->with('status', 'party-updated');
+    }
+
+    public function destroy(Party $party)
+    {
+        $party->delete();
+
+        return redirect('/parties')->with('status', 'party-deleted');
+    }
+}
