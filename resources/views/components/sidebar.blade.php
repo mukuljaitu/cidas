@@ -12,6 +12,7 @@
     <!-- Navigation -->
     <nav class="flex-1 px-4 space-y-8 mt-4">
         <div>
+
             <h3 class="px-2 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4 sidebar-text">Create</h3>
             <div class="space-y-1">
                 <a href="{{ route('tours.create') }}" class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg {{ Request::is('create-tour*') ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50' }} transition-colors">
