@@ -16,32 +16,11 @@ $selectedDateEnd = request('date_end');
 $selectedStatusLabel = $selectedStatus === '1' ? 'Tour' : $selectedStatus;
 @endphp
 
-<form id="tourFilters" method="GET" action="{{ $action }}" class="flex items-center flex-wrap gap-3 w-full">
+<form id="tourFilters" method="GET" action="{{ $action }}" class="filters-bar">
    <input type="hidden" name="name" id="filterNameInput" value="{{ $selectedName }}">
    <input type="hidden" name="status" id="filterStatusInput" value="{{ $selectedStatus }}">
    <input type="hidden" name="state" id="filterStateInput" value="{{ $selectedState }}">
    <input type="hidden" name="month" id="filterMonthInput" value="{{ $selectedMonth }}">
-
-   <!-- Export Button -->
-   <div class="relative">
-      <button type="button" id="chip-export" class="filter-chip" data-popover="popover-export">
-         <svg viewBox="0 0 24 24">
-            <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
-         </svg>
-         <span>Export</span>
-         <svg class="arrow" viewBox="0 0 24 24">
-            <path d="M7 10l5 5 5-5H7z" />
-         </svg>
-      </button>
-      <div id="popover-export" class="popover">
-         <div class="popover-content">
-            <div class="options-list">
-               <button type="button" class="option-item" onclick="window.location.href='{{ request()->fullUrlWithQuery(['export' => 'csv']) }}'">Export as CSV</button>
-               <button type="button" class="option-item" onclick="window.location.href='{{ request()->fullUrlWithQuery(['export' => 'pdf']) }}'">Export as PDF</button>
-            </div>
-         </div>
-      </div>
-   </div>
 
    <!-- Name Filter -->
    <div class="relative">
@@ -173,5 +152,5 @@ $selectedStatusLabel = $selectedStatus === '1' ? 'Tour' : $selectedStatus;
       </div>
    </div>
 
-   <a class="clear-filters ml-auto" href="{{ $action }}">Clear All</a>
+   <a class="clear-filters" href="{{ $action }}">Clear All</a>
 </form>

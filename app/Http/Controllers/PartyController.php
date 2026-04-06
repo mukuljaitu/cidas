@@ -42,6 +42,12 @@ class PartyController extends Controller
         $state = $request->string('state')->toString();
         $type = $request->string('type')->toString();
         $missing = $request->boolean('missing');
+        $missingMin = (int) $request->input('missing_min', 1);
+        $missingMin = max(1, min($missingMin, 25));
+        $missingSections = $request->input('missing_sections', []);
+        if (!is_array($missingSections)) {
+            $missingSections = [$missingSections];
+        }
 
         $query = Party::query()->with('employee')->orderBy('id', 'desc');
 
@@ -66,14 +72,58 @@ class PartyController extends Controller
         }
 
         if ($missing) {
-            $query->where(function ($q) {
-                $q->whereNull('owner_name')->orWhere('owner_name', '')
-                    ->orWhereNull('mobile')->orWhere('mobile', '')
-                    ->orWhereNull('gst_no')->orWhere('gst_no', '')
-                    ->orWhereNull('pan_no')->orWhere('pan_no', '')
-                    ->orWhereNull('bank_name')->orWhere('bank_name', '')
-                    ->orWhereNull('bank_account_no')->orWhere('bank_account_no', '');
-            });
+            $sections = array_values(array_intersect($missingSections, ['general', 'location', 'tax', 'banking']));
+
+            $groups = [
+                'general' => [
+                    ['owner_name', 'string'],
+                    ['mobile', 'string'],
+                    ['employee_id', 'int'],
+                ],
+                'location' => [
+                    ['street_address', 'string'],
+                    ['city', 'string'],
+                    ['district', 'string'],
+                    ['state', 'string'],
+                    ['pin_code', 'string'],
+                ],
+                'tax' => [
+                    ['gst_no', 'string'],
+                    ['pan_no', 'string'],
+                    ['aadhar_card', 'string'],
+                    ['pest_lic', 'string'],
+                    ['fert_lic', 'string'],
+                    ['seed_lic', 'string'],
+                ],
+                'banking' => [
+                    ['bank_name', 'string'],
+                    ['bank_account_no', 'string'],
+                    ['bank_ifsc', 'string'],
+                ],
+            ];
+
+            $selectedGroups = $sections ? array_intersect_key($groups, array_flip($sections)) : $groups;
+            $fields = [];
+            foreach ($selectedGroups as $g) {
+                foreach ($g as $f) {
+                    $fields[] = $f;
+                }
+            }
+
+            $cases = [];
+            foreach ($fields as [$col, $kind]) {
+                $colSql = '`' . $col . '`';
+                if ($kind === 'int') {
+                    $cases[] = "CASE WHEN {$colSql} IS NULL THEN 1 ELSE 0 END";
+                } else {
+                    $cases[] = "CASE WHEN ({$colSql} IS NULL OR TRIM({$colSql}) = '') THEN 1 ELSE 0 END";
+                }
+            }
+
+            if (count($cases) > 0) {
+                $sumExpr = implode(' + ', $cases);
+                $query->whereRaw("({$sumExpr}) >= ?", [$missingMin]);
+            }
         }
 
         $parties = $query->paginate($request->get('pageSize', 50))->withQueryString();

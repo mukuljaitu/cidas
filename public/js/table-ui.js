@@ -4,13 +4,414 @@
     const addPanel = document.getElementById('addMemberPanel');
     const filtersForm = document.getElementById('employeeFilters');
     const tourFiltersForm = document.getElementById('tourFilters');
-    
+    const filtersBarForm = mainCard ? mainCard.querySelector('form.filters-bar') : null;
+
+    function initAlphaTableSort() {
+        const tables = Array.from(document.querySelectorAll('table'));
+        tables.forEach((table) => {
+            if (!(table instanceof HTMLTableElement)) return;
+            if (table.dataset.alphaSortInit === '1') return;
+            if (table.getAttribute('data-disable-alpha-sort') === '1') return;
+
+            const thead = table.tHead;
+            const tbody = table.tBodies && table.tBodies[0];
+            if (!thead || !tbody) return;
+
+            const headerRow = thead.rows && thead.rows[0];
+            if (!headerRow) return;
+
+            const headers = Array.from(headerRow.cells).filter((c) => c && c.tagName === 'TH');
+            if (headers.length === 0) return;
+
+            headers.forEach((th, colIndex) => {
+                if (!(th instanceof HTMLTableCellElement)) return;
+                if (th.getAttribute('data-no-sort') === '1') return;
+                if (th.classList.contains('text-right')) return;
+                const label = (th.textContent || '').trim().toLowerCase();
+                if (label.includes('action')) return;
+
+                th.dataset.sortable = 'true';
+                th.classList.add('alpha-sortable');
+                if (!th.hasAttribute('tabindex')) th.setAttribute('tabindex', '0');
+                if (!th.hasAttribute('title')) th.setAttribute('title', 'Click to sort A→Z / Z→A');
+
+                th.addEventListener('click', () => sortTableByColumn(table, colIndex));
+                th.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        sortTableByColumn(table, colIndex);
+                    }
+                });
+            });
+
+            table.dataset.alphaSortInit = '1';
+        });
+    }
+
+    function getCellSortValue(cell) {
+        if (!(cell instanceof HTMLTableCellElement)) return '';
+
+        const dataValue = cell.getAttribute('data-sort-value') || cell.getAttribute('data-sort');
+        if (dataValue !== null && dataValue !== undefined && String(dataValue).trim() !== '') return String(dataValue);
+
+        const formEl = cell.querySelector('input, select, textarea');
+        if (formEl instanceof HTMLInputElement || formEl instanceof HTMLTextAreaElement) {
+            return (formEl.value || '').trim();
+        }
+        if (formEl instanceof HTMLSelectElement) {
+            const opt = formEl.selectedOptions && formEl.selectedOptions[0];
+            return ((opt && opt.textContent) || formEl.value || '').trim();
+        }
+
+        return (cell.textContent || '').replace(/\s+/g, ' ').trim();
+    }
+
+    function isNumericValue(raw) {
+        const s = String(raw || '').trim().replaceAll(',', '');
+        if (s === '') return false;
+        return /^-?\d+(\.\d+)?$/.test(s);
+    }
+
+    function sortTableByColumn(table, colIndex) {
+        if (!(table instanceof HTMLTableElement)) return;
+        if (table.getAttribute('data-disable-alpha-sort') === '1') return;
+
+        const tbody = table.tBodies && table.tBodies[0];
+        if (!tbody) return;
+
+        const allRows = Array.from(tbody.rows);
+        if (allRows.length <= 1) return;
+
+        const sortableRows = [];
+        const fixedRows = [];
+        allRows.forEach((row, idx) => {
+            if (!(row instanceof HTMLTableRowElement)) return;
+            if (!row.dataset.originalIndex) row.dataset.originalIndex = String(idx);
+
+            const firstCell = row.cells && row.cells[0];
+            const isColspanRow = firstCell instanceof HTMLTableCellElement && firstCell.hasAttribute('colspan') && row.cells.length === 1;
+            if (isColspanRow) fixedRows.push(row);
+            else sortableRows.push(row);
+        });
+
+        if (sortableRows.length <= 1) return;
+
+        const activeCol = Number.parseInt(table.dataset.sortCol || '-1', 10);
+        const currentDir = (table.dataset.sortDir || 'asc').toLowerCase();
+        const nextDir = activeCol === colIndex ? (currentDir === 'asc' ? 'desc' : 'asc') : 'asc';
+
+        table.dataset.sortCol = String(colIndex);
+        table.dataset.sortDir = nextDir;
+
+        const dirMultiplier = nextDir === 'asc' ? 1 : -1;
+        sortableRows.sort((a, b) => {
+            const rawA = getCellSortValue(a.cells[colIndex]);
+            const rawB = getCellSortValue(b.cells[colIndex]);
+
+            const aEmpty = String(rawA).trim() === '';
+            const bEmpty = String(rawB).trim() === '';
+            if (aEmpty && !bEmpty) return 1;
+            if (!aEmpty && bEmpty) return -1;
+
+            let cmp = 0;
+            if (isNumericValue(rawA) && isNumericValue(rawB)) {
+                const na = Number.parseFloat(String(rawA).replaceAll(',', ''));
+                const nb = Number.parseFloat(String(rawB).replaceAll(',', ''));
+                cmp = na === nb ? 0 : na < nb ? -1 : 1;
+            } else {
+                const ka = String(rawA).toLowerCase();
+                const kb = String(rawB).toLowerCase();
+                cmp = ka.localeCompare(kb, undefined, { numeric: true, sensitivity: 'base' });
+            }
+
+            if (cmp !== 0) return cmp * dirMultiplier;
+            return (Number.parseInt(a.dataset.originalIndex || '0', 10) - Number.parseInt(b.dataset.originalIndex || '0', 10));
+        });
+
+        const headerRow = table.tHead && table.tHead.rows && table.tHead.rows[0];
+        if (headerRow) {
+            Array.from(headerRow.cells).forEach((cell, idx) => {
+                if (!(cell instanceof HTMLTableCellElement)) return;
+                cell.classList.remove('sort-asc', 'sort-desc');
+                cell.removeAttribute('aria-sort');
+                if (idx === colIndex) cell.classList.add(nextDir === 'asc' ? 'sort-asc' : 'sort-desc');
+                if (idx === colIndex) cell.setAttribute('aria-sort', nextDir === 'asc' ? 'ascending' : 'descending');
+            });
+        }
+
+        sortableRows.forEach((r) => tbody.appendChild(r));
+        fixedRows.forEach((r) => tbody.appendChild(r));
+    }
+
     // --- Popover Handling ---
     function closeAllPopovers() {
         document.querySelectorAll('.popover').forEach(p => p.classList.remove('show'));
     }
 
+    let activeRequest = null;
+    let debounceTimer = null;
+
+    function getTableCardEl(doc = document) {
+        return doc.getElementById('tableCard');
+    }
+
+    function setTableLoading(isLoading) {
+        const card = getTableCardEl();
+        if (!card) return;
+        if (isLoading) {
+            card.style.opacity = '0.6';
+            card.style.pointerEvents = 'none';
+        } else {
+            card.style.opacity = '';
+            card.style.pointerEvents = '';
+        }
+    }
+
+    function buildUrlFromForm(form) {
+        if (!(form instanceof HTMLFormElement)) return '';
+        const action = form.getAttribute('action') || window.location.pathname;
+        const url = new URL(action, window.location.origin);
+        const params = new URLSearchParams();
+        const fd = new FormData(form);
+        for (const [k, v] of fd.entries()) {
+            const sv = String(v ?? '').trim();
+            if (sv === '') continue;
+            params.append(k, sv);
+        }
+        const qs = params.toString();
+        url.search = qs ? `?${qs}` : '';
+        return url.toString();
+    }
+
+    async function updateTableFromUrl(url, { pushState = true } = {}) {
+        const currentCard = getTableCardEl();
+        if (!currentCard) return;
+        if (!url) return;
+
+        if (activeRequest) activeRequest.abort();
+        activeRequest = new AbortController();
+
+        setTableLoading(true);
+        try {
+            const res = await fetch(url, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                signal: activeRequest.signal,
+            });
+            if (!res.ok) return;
+            const html = await res.text();
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const nextCard = getTableCardEl(doc);
+            if (!nextCard) return;
+            currentCard.replaceWith(nextCard);
+            initAlphaTableSort();
+            closeAllPopovers();
+            if (pushState) window.history.pushState({}, '', url);
+        } catch (err) {
+            if (err && err.name === 'AbortError') return;
+        } finally {
+            setTableLoading(false);
+        }
+    }
+
+    function queueUpdateFromForm(form, { pushState = true } = {}) {
+        if (debounceTimer) window.clearTimeout(debounceTimer);
+        debounceTimer = window.setTimeout(() => {
+            const url = buildUrlFromForm(form);
+            updateTableFromUrl(url, { pushState });
+        }, 150);
+    }
+
+    function markSelectedOption(optionItem) {
+        if (!(optionItem instanceof HTMLElement)) return;
+        const parent = optionItem.closest('.options-list');
+        if (!parent) return;
+        const all = Array.from(parent.querySelectorAll('.option-item.selected'));
+        all.forEach((el) => el.classList.remove('selected'));
+        optionItem.classList.add('selected');
+    }
+
+    function slugifyFilename(raw) {
+        return String(raw || 'export')
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/(^-|-$)/g, '')
+            .slice(0, 64) || 'export';
+    }
+
+    function readTableData() {
+        const card = getTableCardEl();
+        if (!card) return null;
+        const table = card.querySelector('table');
+        if (!(table instanceof HTMLTableElement)) return null;
+
+        const headerCells = Array.from(table.querySelectorAll('thead th'));
+        const headerTexts = headerCells.map((th) => (th.textContent || '').replace(/\s+/g, ' ').trim());
+        const includeIdx = headerTexts
+            .map((t, idx) => ({ t: t.toLowerCase(), idx }))
+            .filter(({ t }) => t !== '' && !t.includes('action'))
+            .map(({ idx }) => idx);
+        const headers = includeIdx.map((i) => headerTexts[i] || '');
+
+        const rows = [];
+        const bodyRows = Array.from(table.tBodies && table.tBodies[0] ? table.tBodies[0].rows : []);
+        bodyRows.forEach((tr) => {
+            if (!(tr instanceof HTMLTableRowElement)) return;
+            const first = tr.cells && tr.cells[0];
+            const isColspanRow = first instanceof HTMLTableCellElement && first.hasAttribute('colspan') && tr.cells.length === 1;
+            if (isColspanRow) return;
+
+            const cells = Array.from(tr.cells || []);
+            const row = includeIdx.map((i) => {
+                const td = cells[i];
+                const text = td ? (td.textContent || '') : '';
+                return text.replace(/\s+/g, ' ').trim();
+            });
+            if (row.some((v) => String(v).trim() !== '')) rows.push(row);
+        });
+
+        const titleEl = mainCard ? mainCard.querySelector('.table-title') : null;
+        const title = titleEl ? (titleEl.textContent || '').trim() : 'export';
+        return { title, headers, rows };
+    }
+
+    function exportXlsx(data) {
+        if (!data) return;
+        const xlsx = window.XLSX;
+        if (!xlsx || !xlsx.utils) return;
+        const aoa = [data.headers, ...data.rows];
+        const ws = xlsx.utils.aoa_to_sheet(aoa);
+        const wb = xlsx.utils.book_new();
+        xlsx.utils.book_append_sheet(wb, ws, 'Data');
+        xlsx.writeFile(wb, `${slugifyFilename(data.title)}.xlsx`);
+    }
+
+    function exportPdf(data) {
+        if (!data) return;
+        const jspdf = window.jspdf;
+        if (!jspdf || !jspdf.jsPDF) return;
+        const doc = new jspdf.jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+        doc.setFontSize(12);
+        doc.text(data.title || 'Export', 40, 40);
+        doc.autoTable({
+            head: [data.headers],
+            body: data.rows,
+            startY: 56,
+            styles: { fontSize: 8, cellPadding: 4 },
+            headStyles: { fillColor: [248, 249, 250], textColor: 60 },
+        });
+        doc.save(`${slugifyFilename(data.title)}.pdf`);
+    }
+
+    function updateChipLabelAndState(key, value) {
+        const label = document.getElementById(`label-${key}`);
+        if (label) {
+            const rawPrefix = (label.textContent || '').split(':')[0].trim();
+            const prefix = rawPrefix && rawPrefix.length <= 20 ? rawPrefix : key;
+            if ((label.textContent || '').includes(':')) {
+                label.textContent = `${prefix}: ${value}`;
+            } else {
+                label.textContent = String(value);
+            }
+        }
+
+        const chip = document.getElementById(`chip-${key}`);
+        if (chip) {
+            const active = String(value).trim() !== '' && String(value) !== 'All';
+            chip.classList.toggle('active', active);
+        }
+    }
+
+    function setMissingInputsEnabled(container, enabled) {
+        if (!(container instanceof HTMLElement)) return;
+        const controls = Array.from(container.querySelectorAll('[data-missing-toggle], select[name="missing_min"], input[name="missing_sections[]"]'));
+        controls.forEach((el) => {
+            if (el instanceof HTMLInputElement || el instanceof HTMLSelectElement) {
+                if (el.hasAttribute('data-missing-toggle')) return;
+                el.disabled = !enabled;
+            }
+        });
+    }
+
+    function readMissingStateFromForm(form) {
+        if (!(form instanceof HTMLFormElement)) return { enabled: false, min: 1, sections: [] };
+        const enabled = (form.querySelector('#filterMissingInput')?.value || '') === '1';
+        const minRaw = form.querySelector('select[name="missing_min"]')?.value || '1';
+        const min = Number.isFinite(Number.parseInt(minRaw, 10)) ? Number.parseInt(minRaw, 10) : 1;
+        const sections = Array.from(form.querySelectorAll('input[name="missing_sections[]"]:checked')).map((i) => i.value);
+        return { enabled, min, sections };
+    }
+
+    function updateMissingChipFromForm(form) {
+        const st = readMissingStateFromForm(form);
+        const chip = document.getElementById('chip-missing');
+        if (chip) chip.classList.toggle('active', st.enabled);
+        const label = document.getElementById('label-missing');
+        if (label) {
+            label.textContent = st.enabled ? `Missing: ${st.min > 1 ? `${st.min}+` : 'On'}` : 'Missing: Off';
+        }
+    }
+
+    function initMissingPopover(form) {
+        if (!(form instanceof HTMLFormElement)) return;
+        const popover = document.getElementById('popover-missing');
+        if (!(popover instanceof HTMLElement)) return;
+
+        const toggle = popover.querySelector('[data-missing-toggle]');
+        const hidden = form.querySelector('#filterMissingInput');
+        if (toggle instanceof HTMLInputElement && hidden instanceof HTMLInputElement) {
+            toggle.checked = hidden.value === '1';
+        }
+
+        setMissingInputsEnabled(popover, toggle instanceof HTMLInputElement ? toggle.checked : false);
+
+        const snapshot = readMissingStateFromForm(form);
+        popover.dataset.snapshot = JSON.stringify(snapshot);
+    }
+
+    function restoreMissingPopover(form) {
+        if (!(form instanceof HTMLFormElement)) return;
+        const popover = document.getElementById('popover-missing');
+        if (!(popover instanceof HTMLElement)) return;
+        const raw = popover.dataset.snapshot || '';
+        if (!raw) return;
+        let snap = null;
+        try {
+            snap = JSON.parse(raw);
+        } catch {
+            snap = null;
+        }
+        if (!snap) return;
+
+        const hidden = form.querySelector('#filterMissingInput');
+        if (hidden instanceof HTMLInputElement) hidden.value = snap.enabled ? '1' : '0';
+
+        const toggle = popover.querySelector('[data-missing-toggle]');
+        if (toggle instanceof HTMLInputElement) toggle.checked = !!snap.enabled;
+
+        const minSel = form.querySelector('select[name="missing_min"]');
+        if (minSel instanceof HTMLSelectElement) minSel.value = String(snap.min || 1);
+
+        const boxes = Array.from(form.querySelectorAll('input[name="missing_sections[]"]'));
+        boxes.forEach((b) => {
+            if (!(b instanceof HTMLInputElement)) return;
+            b.checked = Array.isArray(snap.sections) ? snap.sections.includes(b.value) : false;
+        });
+
+        setMissingInputsEnabled(popover, !!snap.enabled);
+    }
+
     document.addEventListener('click', (e) => {
+        const exportBtn = e.target.closest('[data-export-type]');
+        if (exportBtn instanceof HTMLElement) {
+            const t = exportBtn.getAttribute('data-export-type') || '';
+            const data = readTableData();
+            closeAllPopovers();
+            if (t === 'xlsx') exportXlsx(data);
+            if (t === 'pdf') exportPdf(data);
+            return;
+        }
+
         const chip = e.target.closest('[data-popover]');
         if (chip) {
             e.stopPropagation();
@@ -18,6 +419,9 @@
             const popover = document.getElementById(popoverId);
             const isVisible = popover.classList.contains('show');
             closeAllPopovers();
+            if (chip instanceof HTMLElement && chip.id === 'chip-missing' && filtersBarForm) {
+                initMissingPopover(filtersBarForm);
+            }
             if (!isVisible) popover.classList.add('show');
             return;
         }
@@ -38,38 +442,68 @@
         const role = optionItem.getAttribute('data-filter-role');
         const state = optionItem.getAttribute('data-filter-state');
         const month = optionItem.getAttribute('data-filter-month');
+        const district = optionItem.getAttribute('data-filter-district');
+        const type = optionItem.getAttribute('data-filter-type');
 
-        if (name) {
+        const hasAnyFilter =
+            name !== null ||
+            status !== null ||
+            role !== null ||
+            state !== null ||
+            month !== null ||
+            district !== null ||
+            type !== null;
+        if (!hasAnyFilter) return;
+
+        if (name !== null && name !== undefined) {
             const input = document.getElementById('filterNameInput');
             if (input) input.value = name;
+            updateChipLabelAndState('name', name);
         }
-        if (status) {
+        if (status !== null && status !== undefined) {
             const input = document.getElementById('filterStatusInput');
             if (input) input.value = status;
+            updateChipLabelAndState('status', status === '1' ? 'Tour' : status);
         }
-        if (role) {
+        if (role !== null && role !== undefined) {
             const input = document.getElementById('filterRoleInput');
             if (input) input.value = role;
+            updateChipLabelAndState('role', role);
         }
-        if (state) {
+        if (state !== null && state !== undefined) {
             const input = document.getElementById('filterStateInput');
             if (input) input.value = state;
+            updateChipLabelAndState('state', state);
         }
-        if (month) {
+        if (month !== null && month !== undefined) {
             const input = document.getElementById('filterMonthInput');
             if (input) input.value = month;
+            updateChipLabelAndState('month', month);
+        }
+        if (district !== null && district !== undefined) {
+            const input = document.getElementById('filterDistrictInput');
+            if (input) input.value = district;
+            updateChipLabelAndState('district', district);
+        }
+        if (type !== null && type !== undefined) {
+            const input = document.getElementById('filterTypeInput');
+            if (input) input.value = type;
+            updateChipLabelAndState('type', type);
         }
 
-        const form = filtersForm || tourFiltersForm;
-        if (form) form.submit();
+        markSelectedOption(optionItem);
+        closeAllPopovers();
+
+        const form = optionItem.closest('form') || filtersBarForm || filtersForm || tourFiltersForm;
+        if (form) queueUpdateFromForm(form, { pushState: true });
     });
 
     // --- Date Search ---
     const dateInputs = document.querySelectorAll('.fancy-date-field input');
     dateInputs.forEach(input => {
         input.addEventListener('change', () => {
-            const form = filtersForm || tourFiltersForm;
-            if (form) form.submit();
+            const form = (input && input.closest && input.closest('form')) || filtersBarForm || filtersForm || tourFiltersForm;
+            if (form) queueUpdateFromForm(form, { pushState: true });
         });
     });
 
@@ -84,28 +518,94 @@
                 opt.style.display = text.includes(term) ? 'flex' : 'none';
             });
         });
+        nameSearch.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') e.preventDefault();
+        });
     }
+
+    if (filtersBarForm) {
+        filtersBarForm.addEventListener('change', (e) => {
+            const el = e.target;
+            if (el instanceof HTMLElement && el.hasAttribute('data-defer-submit')) return;
+            queueUpdateFromForm(filtersBarForm, { pushState: true });
+        });
+    }
+
+    document.addEventListener('submit', (e) => {
+        const form = e.target;
+        if (!(form instanceof HTMLFormElement)) return;
+        if (!form.classList.contains('filters-bar')) return;
+        if (mainCard && !mainCard.contains(form)) return;
+        e.preventDefault();
+        updateMissingChipFromForm(form);
+        closeAllPopovers();
+        queueUpdateFromForm(form, { pushState: true });
+    });
+
+    document.addEventListener('change', (e) => {
+        const toggle = e.target.closest('[data-missing-toggle]');
+        if (!(toggle instanceof HTMLInputElement)) return;
+        if (!filtersBarForm) return;
+        const hidden = filtersBarForm.querySelector('#filterMissingInput');
+        if (hidden instanceof HTMLInputElement) hidden.value = toggle.checked ? '1' : '0';
+        const popover = document.getElementById('popover-missing');
+        if (popover instanceof HTMLElement) setMissingInputsEnabled(popover, toggle.checked);
+    });
+
+    document.addEventListener('click', (e) => {
+        const cancel = e.target.closest('[data-missing-cancel]');
+        if (!(cancel instanceof HTMLElement)) return;
+        if (!filtersBarForm) return;
+        restoreMissingPopover(filtersBarForm);
+        closeAllPopovers();
+    });
+
+    document.addEventListener('click', (e) => {
+        const clear = e.target.closest('a.clear-filters');
+        if (clear && clear instanceof HTMLAnchorElement && mainCard && mainCard.contains(clear)) {
+            e.preventDefault();
+            updateTableFromUrl(clear.href, { pushState: true });
+        }
+    });
+
+    document.addEventListener('click', (e) => {
+        const link = e.target.closest('#tableCard a[href]');
+        if (!(link instanceof HTMLAnchorElement)) return;
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+        const href = link.href;
+        if (!href) return;
+        const sameOrigin = href.startsWith(window.location.origin);
+        if (!sameOrigin) return;
+        e.preventDefault();
+        updateTableFromUrl(href, { pushState: true });
+    });
+
+    window.addEventListener('popstate', () => {
+        updateTableFromUrl(window.location.href, { pushState: false });
+    });
 
     let originalTitle = tableTitle ? tableTitle.textContent : '';
     const entitySingular = (addPanel && addPanel.getAttribute('data-entity-singular')) || 'Member';
     const entityPlural = (addPanel && addPanel.getAttribute('data-entity-plural')) || 'Members';
     const resourceBase = (addPanel && addPanel.getAttribute('data-resource')) || '/employees';
 
+    initAlphaTableSort();
+
     if (!mainCard && !addPanel) return;
 
     function openAddMember() {
         if (!addPanel) return;
         addPanel.classList.remove('translate-x-full');
-        
+
         const panelTitle = document.getElementById('panelTitle');
-        if (panelTitle) panelTitle.textContent = `New ${entitySingular}`;
-        
+        if (panelTitle) panelTitle.textContent = 'New';
+
         const form = addPanel.querySelector('form#memberForm');
         if (form instanceof HTMLFormElement) {
             form.setAttribute('action', resourceBase);
             const methodInput = form.querySelector('input[name="_method"]');
             if (methodInput instanceof HTMLInputElement) methodInput.value = '';
-            
+
             getFormFields(form).forEach((n) => {
                 const el = form.querySelector(`[name="${n}"]`);
                 if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
@@ -114,7 +614,7 @@
                     if (el.options.length > 0) el.selectedIndex = 0;
                 }
             });
-            
+
             const deleteBtn = addPanel.querySelector('[data-delete-member]');
             if (deleteBtn) deleteBtn.style.display = 'none';
         }
@@ -124,19 +624,19 @@
     function openEditMember(trigger) {
         if (!addPanel) return;
         addPanel.classList.remove('translate-x-full');
-        
+
         const panelTitle = document.getElementById('panelTitle');
         if (panelTitle) panelTitle.textContent = `Edit ${entitySingular}`;
-        
+
         const form = addPanel.querySelector('form#memberForm');
         if (!(form instanceof HTMLFormElement)) return;
-        
+
         const id = trigger.getAttribute('data-id') || '';
         form.setAttribute('action', `${resourceBase}/${id}`);
-        
+
         const methodInput = form.querySelector('input[name="_method"]');
         if (methodInput instanceof HTMLInputElement) methodInput.value = 'PUT';
-        
+
         getFormFields(form).forEach((n) => {
             const el = form.querySelector(`[name="${n}"]`);
             const v = getTriggerValue(trigger, n);
@@ -146,7 +646,7 @@
                 el.value = v;
             }
         });
-        
+
         const deleteBtn = addPanel.querySelector('[data-delete-member]');
         if (deleteBtn) {
             deleteBtn.style.display = 'flex';
@@ -182,7 +682,7 @@
 
     document.addEventListener('click', (e) => {
         const target = e.target;
-        
+
         const addBtn = target.closest('[data-add-member-trigger]');
         if (addBtn) {
             openAddMember();

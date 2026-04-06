@@ -16,7 +16,7 @@ $selectedDateStart = $showDate ? request('date_start') : null;
 $selectedDateEnd = $showDate ? request('date_end') : null;
 @endphp
 
-<form id="employeeFilters" method="GET" action="{{ $action }}" style="display:flex; align-items:center; flex-wrap:wrap; gap:12px; width:100%;">
+<form id="employeeFilters" method="GET" action="{{ $action }}" class="filters-bar">
     <input type="hidden" name="name" id="filterNameInput" value="{{ $selectedName }}">
     @if($showStatus)
         <input type="hidden" name="status" id="filterStatusInput" value="{{ $selectedStatus }}">
@@ -25,34 +25,35 @@ $selectedDateEnd = $showDate ? request('date_end') : null;
         <input type="hidden" name="role" id="filterRoleInput" value="{{ $selectedRole }}">
     @endif
 
-    <div style="position: relative;">
-        <button type="button" id="chip-name" class="filter-chip {{ $selectedName !== 'All' ? 'active' : '' }}" data-popover="popover-name">
-            <svg viewBox="0 0 24 24">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z" />
-            </svg>
-            <span id="label-name">Name: {{ $selectedName }}</span>
-            <svg class="arrow" viewBox="0 0 24 24">
-                <path d="M7 10l5 5 5-5H7z" />
-            </svg>
-        </button>
-        <div id="popover-name" class="popover">
-            <div class="popover-header">Filter by Name</div>
-            <div class="popover-content">
-                <div class="search-box">
-                    <svg viewBox="0 0 24 24">
-                        <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
-                    </svg>
-                    <input type="text" id="nameSearch" placeholder="Search names...">
-                </div>
-                <div id="nameOptions" class="options-list">
-                    <button type="button" class="option-item {{ $selectedName === 'All' ? 'selected' : '' }}" data-filter-name="All">All Names</button>
-                    @foreach($names as $name)
-                        <button type="button" class="option-item {{ $selectedName === $name ? 'selected' : '' }}" data-filter-name="{{ $name }}">{{ $name }}</button>
-                    @endforeach
+    <div style="display:flex; align-items:center; flex-wrap:wrap; gap:12px; flex:1;">
+        <div style="position: relative;">
+            <button type="button" id="chip-name" class="filter-chip {{ $selectedName !== 'All' ? 'active' : '' }}" data-popover="popover-name">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z" />
+                </svg>
+                <span id="label-name">Name: {{ $selectedName }}</span>
+                <svg class="arrow" viewBox="0 0 24 24">
+                    <path d="M7 10l5 5 5-5H7z" />
+                </svg>
+            </button>
+            <div id="popover-name" class="popover">
+                <div class="popover-header">Filter by Name</div>
+                <div class="popover-content">
+                    <div class="search-box">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
+                        </svg>
+                        <input type="text" id="nameSearch" placeholder="Search names...">
+                    </div>
+                    <div id="nameOptions" class="options-list">
+                        <button type="button" class="option-item {{ $selectedName === 'All' ? 'selected' : '' }}" data-filter-name="All">All Names</button>
+                        @foreach($names as $name)
+                            <button type="button" class="option-item {{ $selectedName === $name ? 'selected' : '' }}" data-filter-name="{{ $name }}">{{ $name }}</button>
+                        @endforeach
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
     @if($showDate)
         <div style="position: relative;">
@@ -131,6 +132,8 @@ $selectedDateEnd = $showDate ? request('date_end') : null;
             </div>
         </div>
     @endif
+
+    </div>
 
     <a class="clear-filters" href="{{ $action }}">Clear All</a>
 </form>

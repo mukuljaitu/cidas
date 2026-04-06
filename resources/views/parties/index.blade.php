@@ -4,15 +4,36 @@
 
 @section('content')
 <x-table-ui-layout title="Parties" :paginator="$parties">
-    <x-slot name="toolbar">
-        <div class="flex items-center gap-3 w-full">
-            <form id="partyFilters" method="GET" action="{{ url('/parties') }}" class="flex items-center flex-wrap gap-3 flex-1">
+    <x-slot name="headerActions">
+        <button type="button" data-add-member-trigger class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm shadow-blue-200">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+            </svg>
+            <span>New</span>
+        </button>
+    </x-slot>
+
+    <x-slot name="filters">
+        @php
+            $missingEnabled = request()->boolean('missing');
+            $missingMin = (int) request('missing_min', 1);
+            if ($missingMin < 1) $missingMin = 1;
+            $missingLabel = $missingEnabled ? ('Missing: ' . ($missingMin > 1 ? ($missingMin . '+') : 'On')) : 'Missing: Off';
+            $missingSections = (array) request()->input('missing_sections', []);
+        @endphp
+        <form id="partyFilters" method="GET" action="{{ url('/parties') }}" class="filters-bar">
+            <input type="hidden" name="name" id="filterNameInput" value="{{ request('name', 'All') }}">
+            <input type="hidden" name="district" id="filterDistrictInput" value="{{ request('district', 'All') }}">
+            <input type="hidden" name="state" id="filterStateInput" value="{{ request('state', 'All') }}">
+            <input type="hidden" name="type" id="filterTypeInput" value="{{ request('type', 'All') }}">
+            <input type="hidden" name="missing" id="filterMissingInput" value="{{ $missingEnabled ? '1' : '0' }}">
+            <div class="flex items-center flex-wrap gap-3 flex-1">
                 <div class="relative">
-                    <button type="button" class="filter-chip {{ request('name', 'All') !== 'All' ? 'active' : '' }}" data-popover="popover-name">
+                    <button type="button" id="chip-name" class="filter-chip {{ request('name', 'All') !== 'All' ? 'active' : '' }}" data-popover="popover-name">
                         <svg viewBox="0 0 24 24">
                             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z" />
                         </svg>
-                        <span>Firm: {{ request('name', 'All') }}</span>
+                        <span id="label-name">Firm: {{ request('name', 'All') }}</span>
                     </button>
                     <div id="popover-name" class="popover">
                         <div class="popover-header">Search Firm</div>
@@ -20,10 +41,10 @@
                             <div class="search-box">
                                 <input type="text" id="nameSearch" placeholder="Search firm names...">
                             </div>
-                            <div class="options-list">
-                                <button type="submit" name="name" value="All" class="option-item {{ request('name', 'All') === 'All' ? 'selected' : '' }}">All Firms</button>
+                            <div id="nameOptions" class="options-list">
+                                <button type="button" class="option-item {{ request('name', 'All') === 'All' ? 'selected' : '' }}" data-filter-name="All">All Firms</button>
                                 @foreach($names as $name)
-                                <button type="submit" name="name" value="{{ $name }}" class="option-item {{ request('name') === $name ? 'selected' : '' }}">{{ $name }}</button>
+                                <button type="button" class="option-item {{ request('name') === $name ? 'selected' : '' }}" data-filter-name="{{ $name }}">{{ $name }}</button>
                                 @endforeach
                             </div>
                         </div>
@@ -31,18 +52,19 @@
                 </div>
 
                 <div class="relative">
-                    <button type="button" class="filter-chip {{ request('district', 'All') !== 'All' ? 'active' : '' }}" data-popover="popover-district">
+                    <button type="button" id="chip-district" class="filter-chip {{ request('district', 'All') !== 'All' ? 'active' : '' }}" data-popover="popover-district">
                         <svg viewBox="0 0 24 24">
                             <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-9-7-9zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
                         </svg>
-                        <span>District: {{ request('district', 'All') }}</span>
+                        <span id="label-district">District: {{ request('district', 'All') }}</span>
                     </button>
                     <div id="popover-district" class="popover">
                         <div class="popover-header">Filter District</div>
                         <div class="popover-content">
                             <div class="options-list">
+                                <button type="button" class="option-item {{ request('district', 'All') === 'All' ? 'selected' : '' }}" data-filter-district="All">All Districts</button>
                                 @foreach($districts as $district)
-                                <button type="submit" name="district" value="{{ $district }}" class="option-item {{ request('district', 'All') === $district ? 'selected' : '' }}">{{ $district }}</button>
+                                <button type="button" class="option-item {{ request('district', 'All') === $district ? 'selected' : '' }}" data-filter-district="{{ $district }}">{{ $district }}</button>
                                 @endforeach
                             </div>
                         </div>
@@ -50,18 +72,19 @@
                 </div>
 
                 <div class="relative">
-                    <button type="button" class="filter-chip {{ request('state', 'All') !== 'All' ? 'active' : '' }}" data-popover="popover-state">
+                    <button type="button" id="chip-state" class="filter-chip {{ request('state', 'All') !== 'All' ? 'active' : '' }}" data-popover="popover-state">
                         <svg viewBox="0 0 24 24">
                             <path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z" />
                         </svg>
-                        <span>State: {{ request('state', 'All') }}</span>
+                        <span id="label-state">State: {{ request('state', 'All') }}</span>
                     </button>
                     <div id="popover-state" class="popover">
                         <div class="popover-header">Filter State</div>
                         <div class="popover-content">
                             <div class="options-list">
+                                <button type="button" class="option-item {{ request('state', 'All') === 'All' ? 'selected' : '' }}" data-filter-state="All">All States</button>
                                 @foreach($states as $state)
-                                <button type="submit" name="state" value="{{ $state }}" class="option-item {{ request('state', 'All') === $state ? 'selected' : '' }}">{{ $state }}</button>
+                                <button type="button" class="option-item {{ request('state', 'All') === $state ? 'selected' : '' }}" data-filter-state="{{ $state }}">{{ $state }}</button>
                                 @endforeach
                             </div>
                         </div>
@@ -69,39 +92,81 @@
                 </div>
 
                 <div class="relative">
-                    <button type="button" class="filter-chip {{ request('type', 'All') !== 'All' ? 'active' : '' }}" data-popover="popover-type">
+                    <button type="button" id="chip-type" class="filter-chip {{ request('type', 'All') !== 'All' ? 'active' : '' }}" data-popover="popover-type">
                         <svg viewBox="0 0 24 24">
                             <path d="M10 16h4v-2h-4v2zm3-14H5c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V7l-6-6zm-1 7V3.5L18.5 9H12z" />
                         </svg>
-                        <span>Type: {{ request('type', 'All') }}</span>
+                        <span id="label-type">Type: {{ request('type', 'All') }}</span>
                     </button>
                     <div id="popover-type" class="popover">
                         <div class="popover-header">Firm Type</div>
                         <div class="popover-content">
                             <div class="options-list">
+                                <button type="button" class="option-item {{ request('type', 'All') === 'All' ? 'selected' : '' }}" data-filter-type="All">All Types</button>
                                 @foreach($types as $type)
-                                <button type="submit" name="type" value="{{ $type }}" class="option-item {{ request('type', 'All') === $type ? 'selected' : '' }}">{{ $type }}</button>
+                                <button type="button" class="option-item {{ request('type', 'All') === $type ? 'selected' : '' }}" data-filter-type="{{ $type }}">{{ $type }}</button>
                                 @endforeach
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="flex items-center gap-2 ml-auto">
-                    <label class="flex items-center gap-2 cursor-pointer bg-white border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition-colors">
-                        <input type="checkbox" name="missing" value="1" {{ request('missing') ? 'checked' : '' }} onchange="this.form.submit()" class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500">
-                        <span class="text-sm font-medium text-gray-700">Missing Data</span>
-                    </label>
-                    <a href="{{ url('/parties') }}" class="text-sm font-medium text-blue-600 hover:text-blue-700">Clear All</a>
-                    <button type="button" data-add-member-trigger class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm shadow-blue-200">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                <div class="relative">
+                    <button type="button" id="chip-missing" class="filter-chip {{ $missingEnabled ? 'active' : '' }}" data-popover="popover-missing">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 5h-2v6h2V7zm0 8h-2v2h2v-2z" />
                         </svg>
-                        <span>New Party</span>
+                        <span id="label-missing">{{ $missingLabel }}</span>
                     </button>
+                    <div id="popover-missing" class="popover" style="min-width: 360px;">
+                        <div class="popover-header">Missing Data</div>
+                        <div class="popover-content">
+                            <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
+                                <input type="checkbox" id="missingEnabledToggle" data-missing-toggle data-defer-submit="1" class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500" {{ $missingEnabled ? 'checked' : '' }}>
+                                Enable Missing Filter
+                            </label>
+
+                            <div class="mt-4 text-[10px] font-extrabold text-gray-400 uppercase tracking-wider">Filter By Section</div>
+                            <div class="mt-2 grid grid-cols-2 gap-2">
+                                <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
+                                    <input type="checkbox" name="missing_sections[]" value="general" data-defer-submit="1" class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500" {{ in_array('general', $missingSections, true) ? 'checked' : '' }}>
+                                    General Info
+                                </label>
+                                <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
+                                    <input type="checkbox" name="missing_sections[]" value="location" data-defer-submit="1" class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500" {{ in_array('location', $missingSections, true) ? 'checked' : '' }}>
+                                    Location & Address
+                                </label>
+                                <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
+                                    <input type="checkbox" name="missing_sections[]" value="tax" data-defer-submit="1" class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500" {{ in_array('tax', $missingSections, true) ? 'checked' : '' }}>
+                                    Tax & Licenses
+                                </label>
+                                <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
+                                    <input type="checkbox" name="missing_sections[]" value="banking" data-defer-submit="1" class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500" {{ in_array('banking', $missingSections, true) ? 'checked' : '' }}>
+                                    Banking Details
+                                </label>
+                            </div>
+
+                            <div class="mt-4 flex items-center justify-between gap-3">
+                                <div class="text-sm font-medium text-gray-700">Missing at least</div>
+                                <select name="missing_min" data-defer-submit="1" class="px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm font-semibold text-gray-700">
+                                    @for($i = 1; $i <= 10; $i++)
+                                        <option value="{{ $i }}" {{ $missingMin === $i ? 'selected' : '' }}>{{ $i }}{{ $i === 1 ? '+' : '+' }}</option>
+                                    @endfor
+                                </select>
+                            </div>
+
+                            <div class="mt-4 flex items-center justify-end gap-2">
+                                <button type="button" data-missing-cancel class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold rounded-lg transition-colors">Cancel</button>
+                                <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors">Apply</button>
+                            </div>
+
+                            <div class="mt-3 text-xs font-semibold text-gray-400">Tip: Leave all sections unchecked to match any missing field.</div>
+                        </div>
+                    </div>
                 </div>
-            </form>
-        </div>
+            </div>
+            <a href="{{ url('/parties') }}" class="clear-filters">Clear All</a>
+        </form>
     </x-slot>
 
     <x-slot name="thead">
@@ -215,7 +280,7 @@
             class="fixed inset-y-0 right-0 w-[560px] bg-white shadow-2xl border-l border-gray-200 transform translate-x-full transition-transform duration-300 z-50 overflow-y-auto">
             <div class="p-8">
                 <div class="flex items-center justify-between mb-8">
-                    <h2 class="text-2xl font-bold text-gray-900" id="panelTitle">New Party</h2>
+                    <h2 class="text-2xl font-bold text-gray-900" id="panelTitle">New</h2>
                     <button type="button" data-add-member-cancel class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-lg transition-all">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -412,137 +477,7 @@
             document.getElementById('picPreview').classList.add('hidden');
         }
     });
-
-    // Handle popover toggling for the custom filters
-    document.querySelectorAll('[data-popover]').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const popoverId = btn.getAttribute('data-popover');
-            const popover = document.getElementById(popoverId);
-            const isVisible = popover.classList.contains('show');
-
-            document.querySelectorAll('.popover').forEach(p => p.classList.remove('show'));
-            if (!isVisible) popover.classList.add('show');
-        });
-    });
-
-    document.addEventListener('click', (e) => {
-        if (!e.target.closest('.popover') && !e.target.closest('[data-popover]')) {
-            document.querySelectorAll('.popover').forEach(p => p.classList.remove('show'));
-        }
-    });
-
-    // Handle search in popover
-    const nameSearchInput = document.getElementById('nameSearch');
-    if (nameSearchInput) {
-        nameSearchInput.addEventListener('input', (e) => {
-            const term = e.target.value.toLowerCase();
-            const options = e.target.closest('.popover-content').querySelectorAll('.options-list .option-item');
-            options.forEach(opt => {
-                const text = opt.textContent.toLowerCase();
-                opt.style.display = text.includes(term) ? 'flex' : 'none';
-            });
-        });
-    }
 </script>
-<style>
-    .filter-chip {
-        display: inline-flex;
-        align-items: center;
-        height: 32px;
-        padding: 0 12px;
-        background: white;
-        border: 1px solid #dadce0;
-        border-radius: 16px;
-        font-size: 14px;
-        color: #5f6368;
-        cursor: pointer;
-        transition: background 0.2s, border-color 0.2s;
-        gap: 8px;
-    }
-
-    .filter-chip svg {
-        width: 18px;
-        height: 18px;
-        fill: currentColor;
-    }
-
-    .filter-chip.active {
-        background-color: #e8f0fe;
-        border-color: #1a73e8;
-        color: #1a73e8;
-    }
-
-    .popover {
-        display: none;
-        position: absolute;
-        top: 40px;
-        left: 0;
-        background: white;
-        border-radius: 8px;
-        box-shadow: 0 1px 2px 0 rgba(60, 64, 67, .30), 0 2px 6px 2px rgba(60, 64, 67, .15);
-        border: 1px solid #dadce0;
-        z-index: 1000;
-        min-width: 250px;
-        padding: 8px 0;
-        margin-top: 4px;
-    }
-
-    .popover.show {
-        display: block;
-    }
-
-    .popover-header {
-        padding: 12px 16px;
-        font-size: 11px;
-        font-weight: 700;
-        color: #5f6368;
-        text-transform: uppercase;
-        border-bottom: 1px solid #f1f3f4;
-    }
-
-    .popover-content {
-        padding: 16px;
-    }
-
-    .search-box input {
-        width: 100%;
-        padding: 8px 12px;
-        border: 1px solid #dadce0;
-        border-radius: 4px;
-        font-size: 14px;
-        box-sizing: border-box;
-        margin-bottom: 8px;
-    }
-
-    .options-list {
-        max-height: 200px;
-        overflow-y: auto;
-    }
-
-    .option-item {
-        width: 100%;
-        text-align: left;
-        padding: 8px 12px;
-        font-size: 14px;
-        cursor: pointer;
-        border-radius: 4px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        border: none;
-        background: none;
-    }
-
-    .option-item:hover {
-        background: #f1f3f4;
-    }
-
-    .option-item.selected {
-        color: #1a73e8;
-        font-weight: 600;
-    }
-</style>
 @endpush
 
 @endsection

@@ -4,31 +4,33 @@
 
 @section('content')
 <x-table-ui-layout title="Variants" :paginator="$variants">
-    <x-slot name="toolbar">
-        <div class="flex items-center gap-3 w-full">
-            <form method="GET" action="{{ url('/variants') }}" class="flex items-center gap-3 flex-1">
-                <select name="product_id" onchange="this.form.submit()" class="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-semibold text-gray-700">
+    <x-slot name="headerActions">
+        <button type="button" data-add-member-trigger class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm shadow-blue-200">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+            </svg>
+            <span>New</span>
+        </button>
+    </x-slot>
+
+    <x-slot name="filters">
+        <form method="GET" action="{{ url('/variants') }}" class="filters-bar">
+            <div class="flex items-center gap-3 flex-wrap flex-1">
+                <select name="product_id" class="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-semibold text-gray-700">
                     <option value="All" {{ request('product_id', 'All') === 'All' ? 'selected' : '' }}>All Products</option>
                     @foreach(($productOptions ?? []) as $p)
                         <option value="{{ $p->id }}" {{ (string) request('product_id') === (string) $p->id ? 'selected' : '' }}>{{ $p->name }}</option>
                     @endforeach
                 </select>
-                <select name="name" onchange="this.form.submit()" class="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-semibold text-gray-700">
+                <select name="name" class="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-semibold text-gray-700">
                     <option value="All" {{ request('name', 'All') === 'All' ? 'selected' : '' }}>All Names</option>
                     @foreach(($names ?? []) as $n)
                         <option value="{{ $n }}" {{ request('name') === $n ? 'selected' : '' }}>{{ $n }}</option>
                     @endforeach
                 </select>
-                <a href="{{ url('/variants') }}" class="text-sm font-medium text-blue-600 hover:text-blue-700 ml-auto">Clear</a>
-            </form>
-
-            <button type="button" data-add-member-trigger class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm shadow-blue-200">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                </svg>
-                <span>New Variant</span>
-            </button>
-        </div>
+            </div>
+            <a href="{{ url('/variants') }}" class="clear-filters">Clear All</a>
+        </form>
     </x-slot>
 
     <x-slot name="thead">
@@ -105,7 +107,7 @@
             class="fixed inset-y-0 right-0 w-[520px] bg-white shadow-2xl border-l border-gray-200 transform translate-x-full transition-transform duration-300 z-50 overflow-y-auto">
             <div class="p-8">
                 <div class="flex items-center justify-between mb-8">
-                    <h2 class="text-2xl font-bold text-gray-900" id="panelTitle">New Variant</h2>
+                    <h2 class="text-2xl font-bold text-gray-900" id="panelTitle">New</h2>
                     <button type="button" data-add-member-cancel class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-lg transition-all">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                     </button>

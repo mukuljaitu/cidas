@@ -6,20 +6,47 @@
 <div class="flex flex-col gap-6" id="mainCard">
     <!-- Page Header -->
     @if($title)
-    <div class="flex items-center justify-between">
-        <h1 class="text-3xl font-bold text-gray-900 tracking-tight table-title">{{ $title }}</h1>
-        <div class="flex items-center gap-3">
-            {{ $toolbar ?? '' }}
+    <div class="flex flex-col gap-3">
+        <div class="flex items-center justify-between">
+            <h1 class="text-3xl font-bold text-gray-900 tracking-tight table-title">{{ $title }}</h1>
+            <div class="flex items-center gap-3">
+                <div class="relative">
+                    <button type="button" class="filter-chip" data-popover="popover-export">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M5 20h14v-2H5v2zM12 2l-5.5 5.5 1.42 1.42L11 5.84V16h2V5.84l3.08 3.08 1.42-1.42L12 2z" />
+                        </svg>
+                        <span>Export</span>
+                        <svg class="arrow" viewBox="0 0 24 24">
+                            <path d="M7 10l5 5 5-5H7z" />
+                        </svg>
+                    </button>
+                    <div id="popover-export" class="popover">
+                        <div class="popover-header">Download Data</div>
+                        <div class="popover-content">
+                            <div class="options-list">
+                                <button type="button" class="option-item" data-export-type="xlsx">Excel (.xlsx)</button>
+                                <button type="button" class="option-item" data-export-type="pdf">PDF (.pdf)</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {{ $headerActions ?? ($toolbar ?? '') }}
+            </div>
         </div>
+        @if(isset($filters))
+        <div class="w-full">
+            {{ $filters }}
+        </div>
+        @endif
     </div>
     @endif
 
     <!-- Main Card -->
-    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+    <div id="tableCard" class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse">
                 <thead>
-                    <tr class="bg-gray-50/50 border-b border-gray-100">
+                    <tr class="bg-gray-50 border-b border-gray-200">
                         {{ $thead ?? '' }}
                     </tr>
                 </thead>

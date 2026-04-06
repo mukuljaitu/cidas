@@ -9,7 +9,7 @@
         <h1 class="text-3xl font-bold text-gray-900 tracking-tight">Dashboard Overview</h1>
         <button type="button" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm shadow-blue-200">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-            <span>New Project</span>
+            <span>New</span>
         </button>
     </div>
 

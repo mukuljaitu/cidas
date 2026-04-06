@@ -4,7 +4,7 @@
 
 @section('content')
 <x-table-ui-layout title="Daily Sales Tours" :paginator="$tours">
-    <x-slot name="toolbar">
+    <x-slot name="filters">
         <x-tour-filters
             :action="route('tours.index')"
             :names="$names"

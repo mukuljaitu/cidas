@@ -4,16 +4,17 @@
 
 @section('content')
 <x-table-ui-layout title="Transports" :paginator="$transports">
-    <x-slot name="toolbar">
-        <div class="flex items-center gap-3">
-            <x-table-filters :names="$names" :action="url('/transports')" :showDate="false" :showStatus="false" :showRole="false" />
-            <button type="button" data-add-member-trigger class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm shadow-blue-200">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                </svg>
-                <span>New Transport</span>
-            </button>
-        </div>
+    <x-slot name="headerActions">
+        <button type="button" data-add-member-trigger class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm shadow-blue-200">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+            </svg>
+            <span>New</span>
+        </button>
+    </x-slot>
+
+    <x-slot name="filters">
+        <x-table-filters :names="$names" :action="url('/transports')" :showDate="false" :showStatus="false" :showRole="false" />
     </x-slot>
 
     <x-slot name="thead">
@@ -105,7 +106,7 @@
             class="fixed inset-y-0 right-0 w-[480px] bg-white shadow-2xl border-l border-gray-200 transform translate-x-full transition-transform duration-300 z-50 overflow-y-auto">
             <div class="p-8">
                 <div class="flex items-center justify-between mb-8">
-                    <h2 class="text-2xl font-bold text-gray-900" id="panelTitle">New Transport</h2>
+                    <h2 class="text-2xl font-bold text-gray-900" id="panelTitle">New</h2>
                     <button type="button" data-add-member-cancel class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-lg transition-all">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                     </button>
