@@ -18,6 +18,7 @@ class ProductsTest extends TestCase
 
         $response = $this->actingAs($user)->post('/products', [
             'name' => 'Product A',
+            'type' => 'Fer',
             'description' => 'Demo',
         ]);
 
@@ -36,12 +37,14 @@ class ProductsTest extends TestCase
             'company_id' => 1,
             'display_id' => 'PRD-'.strtoupper(Str::random(6)),
             'name' => 'Old',
+            'type' => 'Fer',
             'description' => null,
             'created_by' => $user->id,
         ]);
 
         $response = $this->actingAs($user)->put("/products/{$product->id}", [
             'name' => 'New',
+            'type' => 'Pes',
             'description' => 'Updated',
         ]);
 

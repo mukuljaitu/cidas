@@ -26,6 +26,7 @@
             <input type="hidden" name="district" id="filterDistrictInput" value="{{ request('district', 'All') }}">
             <input type="hidden" name="state" id="filterStateInput" value="{{ request('state', 'All') }}">
             <input type="hidden" name="type" id="filterTypeInput" value="{{ request('type', 'All') }}">
+            <input type="hidden" name="employee_id" id="filterEmployeeInput" value="{{ request('employee_id', 'All') }}">
             <input type="hidden" name="missing" id="filterMissingInput" value="{{ $missingEnabled ? '1' : '0' }}">
             <div class="flex items-center flex-wrap gap-3 flex-1">
                 <div class="relative">
@@ -105,6 +106,33 @@
                                 <button type="button" class="option-item {{ request('type', 'All') === 'All' ? 'selected' : '' }}" data-filter-type="All">All Types</button>
                                 @foreach($types as $type)
                                 <button type="button" class="option-item {{ request('type', 'All') === $type ? 'selected' : '' }}" data-filter-type="{{ $type }}">{{ $type }}</button>
+                                @endforeach
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                @php
+                    $selectedEmployeeId = request('employee_id', 'All');
+                    $selectedEmployeeName = 'All';
+                    if ($selectedEmployeeId !== '' && $selectedEmployeeId !== 'All') {
+                        $selectedEmployeeName = $employeeOptions->firstWhere('id', (int) $selectedEmployeeId)?->name ?? 'All';
+                    }
+                @endphp
+                <div class="relative">
+                    <button type="button" id="chip-employee" class="filter-chip {{ request('employee_id', 'All') !== 'All' ? 'active' : '' }}" data-popover="popover-employee">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M12 12c2.21 0 4-1.79 4-4S14.21 4 12 4 8 5.79 8 8s1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                        </svg>
+                        <span id="label-employee">Salesman: {{ $selectedEmployeeName }}</span>
+                    </button>
+                    <div id="popover-employee" class="popover">
+                        <div class="popover-header">Filter Salesman</div>
+                        <div class="popover-content">
+                            <div class="options-list">
+                                <button type="button" class="option-item {{ request('employee_id', 'All') === 'All' ? 'selected' : '' }}" data-filter-employee="All" data-filter-employee-label="All">All Salesmen</button>
+                                @foreach($employeeOptions as $emp)
+                                <button type="button" class="option-item {{ (string) request('employee_id') === (string) $emp->id ? 'selected' : '' }}" data-filter-employee="{{ $emp->id }}" data-filter-employee-label="{{ $emp->name }}">{{ $emp->name }}</button>
                                 @endforeach
                             </div>
                         </div>

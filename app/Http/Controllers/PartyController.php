@@ -41,6 +41,7 @@ class PartyController extends Controller
         $district = $request->string('district')->toString();
         $state = $request->string('state')->toString();
         $type = $request->string('type')->toString();
+        $employeeIdRaw = $request->input('employee_id');
         $missing = $request->boolean('missing');
         $missingMin = (int) $request->input('missing_min', 1);
         $missingMin = max(1, min($missingMin, 25));
@@ -69,6 +70,11 @@ class PartyController extends Controller
 
         if ($type !== '' && $type !== 'All') {
             $query->where('party_type', $type);
+        }
+
+        $employeeId = (int) $employeeIdRaw;
+        if ($employeeId > 0) {
+            $query->where('employee_id', $employeeId);
         }
 
         if ($missing) {
@@ -192,7 +198,7 @@ class PartyController extends Controller
         ]);
 
         do {
-            $displayId = 'PRT-'.strtoupper(Str::random(6));
+            $displayId = 'PRT-' . strtoupper(Str::random(6));
         } while (Party::query()->where('display_id', $displayId)->exists());
         $createdBy = optional($request->user())->email ?? 'system@local';
 

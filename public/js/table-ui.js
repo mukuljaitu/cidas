@@ -444,6 +444,8 @@
         const month = optionItem.getAttribute('data-filter-month');
         const district = optionItem.getAttribute('data-filter-district');
         const type = optionItem.getAttribute('data-filter-type');
+        const employee = optionItem.getAttribute('data-filter-employee');
+        const employeeLabel = optionItem.getAttribute('data-filter-employee-label');
 
         const hasAnyFilter =
             name !== null ||
@@ -452,7 +454,8 @@
             state !== null ||
             month !== null ||
             district !== null ||
-            type !== null;
+            type !== null ||
+            employee !== null;
         if (!hasAnyFilter) return;
 
         if (name !== null && name !== undefined) {
@@ -489,6 +492,11 @@
             const input = document.getElementById('filterTypeInput');
             if (input) input.value = type;
             updateChipLabelAndState('type', type);
+        }
+        if (employee !== null && employee !== undefined) {
+            const input = document.getElementById('filterEmployeeInput');
+            if (input) input.value = employee;
+            updateChipLabelAndState('employee', employeeLabel ?? employee);
         }
 
         markSelectedOption(optionItem);
