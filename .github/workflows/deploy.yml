@@ -17,7 +17,8 @@ jobs:
           port: ${{ secrets.PORT }}
           script: |
             cd /home/u506903612/domains/cidas.cropcarechemical.com/public_html/
-            git pull origin main
+            git fetch --all
+            git reset --hard origin/main
             composer install --no-dev --optimize-autoloader
             npm install
             npm run build
