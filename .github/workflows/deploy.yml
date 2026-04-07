@@ -17,6 +17,7 @@ jobs:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_KEY }}
+          port: 65002
           script: |
             cd /home/u506903612/domains/cidas.cropcarechemical.com/public_html/
             git pull origin main
