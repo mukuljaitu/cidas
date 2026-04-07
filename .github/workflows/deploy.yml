@@ -1,25 +1,27 @@
-name: Deploy to Hostinger
+name: Deploy Laravel Site
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main ] # Trigger on push to main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy via SSH
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Deploy to Hostinger via SSH
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
-          password: ${{ secrets.PASSWORD }}
-          port: ${{ secrets.PORT }}
+          key: ${{ secrets.SSH_KEY }}
           script: |
             cd /home/u506903612/domains/cidas.cropcarechemical.com/public_html/
-            git fetch --all
-            git reset --hard origin/main
+            git pull origin main
             composer install --no-dev --optimize-autoloader
-            npm install
-            npm run build
-            php artisan optimize:clear
+            php artisan migrate --force
+            php artisan config:cache
+            php artisan route:cache
+            php artisan view:cache
