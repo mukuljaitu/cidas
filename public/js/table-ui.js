@@ -304,21 +304,21 @@
         doc.save(`${slugifyFilename(data.title)}.pdf`);
     }
 
-    function updateChipLabelAndState(key, value) {
+    function updateChipLabelAndState(key, labelValue, rawValue = labelValue) {
         const label = document.getElementById(`label-${key}`);
         if (label) {
             const rawPrefix = (label.textContent || '').split(':')[0].trim();
             const prefix = rawPrefix && rawPrefix.length <= 20 ? rawPrefix : key;
             if ((label.textContent || '').includes(':')) {
-                label.textContent = `${prefix}: ${value}`;
+                label.textContent = `${prefix}: ${labelValue}`;
             } else {
-                label.textContent = String(value);
+                label.textContent = String(labelValue);
             }
         }
 
         const chip = document.getElementById(`chip-${key}`);
         if (chip) {
-            const active = String(value).trim() !== '' && String(value) !== 'All';
+            const active = String(rawValue).trim() !== '' && String(rawValue) !== 'All';
             chip.classList.toggle('active', active);
         }
     }
@@ -352,6 +352,86 @@
         return txt || String(value ?? '');
     }
 
+    function getSelectDefaultValue(sel) {
+        if (!(sel instanceof HTMLSelectElement)) return '';
+        const allOpt = sel.querySelector('option[value="All"]');
+        if (allOpt) return 'All';
+        const def = Array.from(sel.options || []).find((o) => o && o.defaultSelected);
+        if (def) return def.value;
+        if (sel.options && sel.options.length > 0) return sel.options[0].value;
+        return '';
+    }
+
+    function syncFormControlsFromParams(form, sp) {
+        if (!(form instanceof HTMLFormElement)) return;
+        if (!(sp instanceof URLSearchParams)) return;
+
+        const elements = Array.from(form.elements || []);
+        const byName = new Map();
+        elements.forEach((el) => {
+            if (!(el instanceof HTMLInputElement || el instanceof HTMLSelectElement || el instanceof HTMLTextAreaElement)) return;
+            const name = (el.getAttribute('name') || '').trim();
+            if (!name) return;
+            if (!byName.has(name)) byName.set(name, []);
+            byName.get(name).push(el);
+        });
+
+        byName.forEach((els, name) => {
+            const values = sp.getAll(name);
+            const hasAny = values.length > 0;
+            const first = els[0];
+
+            const isCheckbox = els.some((el) => el instanceof HTMLInputElement && (el.type || '').toLowerCase() === 'checkbox');
+            const isRadio = els.some((el) => el instanceof HTMLInputElement && (el.type || '').toLowerCase() === 'radio');
+            const isMultiSelect = els.some((el) => el instanceof HTMLSelectElement && el.multiple);
+
+            if (isCheckbox) {
+                els.forEach((el) => {
+                    if (!(el instanceof HTMLInputElement)) return;
+                    if ((el.type || '').toLowerCase() !== 'checkbox') return;
+                    el.checked = hasAny ? values.includes(el.value) : false;
+                });
+                return;
+            }
+
+            if (isRadio) {
+                const next = hasAny ? (sp.get(name) ?? '') : '';
+                els.forEach((el) => {
+                    if (!(el instanceof HTMLInputElement)) return;
+                    if ((el.type || '').toLowerCase() !== 'radio') return;
+                    el.checked = next !== '' && el.value === next;
+                });
+                return;
+            }
+
+            if (isMultiSelect) {
+                els.forEach((el) => {
+                    if (!(el instanceof HTMLSelectElement) || !el.multiple) return;
+                    const set = new Set(values);
+                    Array.from(el.options || []).forEach((opt) => {
+                        opt.selected = hasAny ? set.has(opt.value) : false;
+                    });
+                });
+                return;
+            }
+
+            const next = hasAny ? (sp.get(name) ?? '') : null;
+            els.forEach((el) => {
+                if (el instanceof HTMLSelectElement) {
+                    const fallback = getSelectDefaultValue(el);
+                    const v = next === null ? fallback : next;
+                    if (v !== null && v !== undefined) el.value = String(v);
+                    return;
+                }
+                if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+                    const fallback = el.defaultValue ?? '';
+                    const v = next === null ? fallback : next;
+                    el.value = v === null || v === undefined ? '' : String(v);
+                }
+            });
+        });
+    }
+
     function syncFiltersBarFromUrl(url) {
         const form = document.querySelector('#mainCard form.filters-bar');
         if (!(form instanceof HTMLFormElement)) return;
@@ -363,6 +443,8 @@
             u = null;
         }
         if (!u) return;
+
+        syncFormControlsFromParams(form, u.searchParams);
 
         const mappings = [
             { key: 'name', param: 'name', inputId: 'filterNameInput', attr: 'data-filter-name' },
@@ -378,50 +460,21 @@
         mappings.forEach((m) => {
             const input = document.getElementById(m.inputId);
             if (!(input instanceof HTMLInputElement)) return;
-            let nextVal = '';
-            if (u.searchParams.has(m.param)) {
-                nextVal = u.searchParams.get(m.param) ?? '';
-            } else {
-                const hasAll = m.attr ? !!document.querySelector(`#mainCard .option-item[${m.attr}="All"]`) : false;
-                nextVal = hasAll ? 'All' : input.defaultValue;
-            }
-            input.value = nextVal;
-
+            const nextVal = input.value ?? '';
             const displayValue = m.attr ? inferLabelFromOption(m.attr, nextVal, m.labelAttr || null) : nextVal;
-            updateChipLabelAndState(m.key, displayValue);
-
+            updateChipLabelAndState(m.key, displayValue, nextVal);
             if (m.attr) setSelectedOptionByAttr(m.attr, nextVal);
         });
 
         const missingInput = document.getElementById('filterMissingInput');
         if (missingInput instanceof HTMLInputElement) {
-            const next = u.searchParams.has('missing') ? (u.searchParams.get('missing') ?? '') : '0';
-            missingInput.value = next;
+            if (!u.searchParams.has('missing')) missingInput.value = '0';
         }
-
         const missingMinSel = form.querySelector('select[name="missing_min"]');
         if (missingMinSel instanceof HTMLSelectElement) {
-            const fallback =
-                missingMinSel.querySelector('option[selected]')?.value ||
-                (missingMinSel.options && missingMinSel.options[0] ? missingMinSel.options[0].value : '') ||
-                missingMinSel.value;
-            const next = u.searchParams.has('missing_min') ? (u.searchParams.get('missing_min') ?? '') : fallback;
-            if (next) missingMinSel.value = next;
-        }
-
-        const sections = u.searchParams.getAll('missing_sections[]');
-        if (sections.length > 0) {
-            const boxes = Array.from(form.querySelectorAll('input[name="missing_sections[]"]'));
-            boxes.forEach((b) => {
-                if (!(b instanceof HTMLInputElement)) return;
-                b.checked = sections.includes(b.value);
-            });
-        } else {
-            const boxes = Array.from(form.querySelectorAll('input[name="missing_sections[]"]'));
-            boxes.forEach((b) => {
-                if (!(b instanceof HTMLInputElement)) return;
-                b.checked = false;
-            });
+            if (!u.searchParams.has('missing_min') && missingMinSel.options && missingMinSel.options.length > 0) {
+                missingMinSel.value = missingMinSel.options[0].value;
+            }
         }
 
         updateMissingChipFromForm(form);
@@ -532,8 +585,9 @@
             const popover = document.getElementById(popoverId);
             const isVisible = popover.classList.contains('show');
             closeAllPopovers();
-            if (chip instanceof HTMLElement && chip.id === 'chip-missing' && filtersBarForm) {
-                initMissingPopover(filtersBarForm);
+            if (chip instanceof HTMLElement && chip.id === 'chip-missing') {
+                const form = (chip.closest && chip.closest('form')) || document.querySelector('#mainCard form.filters-bar');
+                if (form instanceof HTMLFormElement) initMissingPopover(form);
             }
             if (!isVisible) popover.classList.add('show');
             return;
@@ -571,45 +625,47 @@
             employee !== null;
         if (!hasAnyFilter) return;
 
+        const optionText = (optionItem.textContent || '').replace(/\s+/g, ' ').trim();
+
         if (name !== null && name !== undefined) {
             const input = document.getElementById('filterNameInput');
             if (input) input.value = name;
-            updateChipLabelAndState('name', name);
+            updateChipLabelAndState('name', optionText || name, name);
         }
         if (status !== null && status !== undefined) {
             const input = document.getElementById('filterStatusInput');
             if (input) input.value = status;
-            updateChipLabelAndState('status', status === '1' ? 'Tour' : status);
+            updateChipLabelAndState('status', status === '1' ? 'Tour' : (optionText || status), status);
         }
         if (role !== null && role !== undefined) {
             const input = document.getElementById('filterRoleInput');
             if (input) input.value = role;
-            updateChipLabelAndState('role', role);
+            updateChipLabelAndState('role', optionText || role, role);
         }
         if (state !== null && state !== undefined) {
             const input = document.getElementById('filterStateInput');
             if (input) input.value = state;
-            updateChipLabelAndState('state', state);
+            updateChipLabelAndState('state', optionText || state, state);
         }
         if (month !== null && month !== undefined) {
             const input = document.getElementById('filterMonthInput');
             if (input) input.value = month;
-            updateChipLabelAndState('month', month);
+            updateChipLabelAndState('month', optionText || month, month);
         }
         if (district !== null && district !== undefined) {
             const input = document.getElementById('filterDistrictInput');
             if (input) input.value = district;
-            updateChipLabelAndState('district', district);
+            updateChipLabelAndState('district', optionText || district, district);
         }
         if (type !== null && type !== undefined) {
             const input = document.getElementById('filterTypeInput');
             if (input) input.value = type;
-            updateChipLabelAndState('type', type);
+            updateChipLabelAndState('type', optionText || type, type);
         }
         if (employee !== null && employee !== undefined) {
             const input = document.getElementById('filterEmployeeInput');
             if (input) input.value = employee;
-            updateChipLabelAndState('employee', employeeLabel ?? employee);
+            updateChipLabelAndState('employee', employeeLabel ?? (optionText || employee), employee);
         }
 
         markSelectedOption(optionItem);
@@ -636,7 +692,7 @@
             const options = document.querySelectorAll('#nameOptions .option-item');
             options.forEach(opt => {
                 const text = opt.textContent.toLowerCase();
-                opt.style.display = text.includes(term) ? 'flex' : 'none';
+                opt.style.display = text.includes(term) ? '' : 'none';
             });
         });
         nameSearch.addEventListener('keydown', (e) => {

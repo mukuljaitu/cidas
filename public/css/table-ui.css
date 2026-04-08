@@ -375,6 +375,22 @@ th.alpha-sortable.sort-desc::after {
     color: #202124;
 }
 
+.google-search-input::-webkit-search-cancel-button,
+.google-search-input::-webkit-search-decoration,
+.google-search-input::-webkit-search-results-button,
+.google-search-input::-webkit-search-results-decoration {
+    -webkit-appearance: none;
+    appearance: none;
+    display: none;
+}
+
+.google-search-input::-ms-clear,
+.google-search-input::-ms-reveal {
+    display: none;
+    width: 0;
+    height: 0;
+}
+
 .google-search-input::placeholder {
     color: #9aa0a6;
 }
