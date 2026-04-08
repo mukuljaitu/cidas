@@ -18,19 +18,19 @@ jobs:
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_KEY }}
           port: 65002
-script: |
-  cd /home/u506903612/domains/cidas.cropcarechemical.com/public_html/
+          script: |
+            cd /home/u506903612/domains/cidas.cropcarechemical.com/public_html/
   
-  # 1. Force clear the 'poisoned' cache
-  rm -f bootstrap/cache/*.php
+            # 1. Force clear the 'poisoned' cache
+            rm -f bootstrap/cache/*.php
   
-  # 2. Re-install without scripts to prevent timeout crashes
-  composer install --no-dev --no-scripts --optimize-autoloader
+            # 2. Re-install without scripts to prevent timeout crashes
+            composer install --no-dev --no-scripts --optimize-autoloader
   
-  # 3. Regenerate the fresh server cache
-  php artisan config:clear
-  php artisan cache:clear
-  php artisan view:clear
+            # 3. Regenerate the fresh server cache
+            php artisan config:clear
+            php artisan cache:clear
+            php artisan view:clear
   
-  # 4. Fix folder permissions (Crucial for Hostinger)
-  chmod -R 775 storage bootstrap/cache
+            # 4. Fix folder permissions (Crucial for Hostinger)
+            chmod -R 775 storage bootstrap/cache
