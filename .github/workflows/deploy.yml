@@ -26,7 +26,8 @@ jobs:
 
             # 2. PULL THE NEW CODE (The missing step!)
             git pull origin main
-
+            npm install
+            npm run build
             # 3. Clean up cache files
             rm -f bootstrap/cache/*.php
 
