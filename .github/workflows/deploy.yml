@@ -2,7 +2,7 @@ name: Deploy Laravel Site
 
 on:
   push:
-    branches: [ main ] # Trigger on push to main
+    branches: [ main ]
 
 jobs:
   deploy:
@@ -20,17 +20,31 @@ jobs:
           port: 65002
           script: |
             cd /home/u506903612/domains/cidas.cropcarechemical.com/public_html/
-  
-            # 1. Force clear the 'poisoned' cache
+            
+            # 1. Put site in maintenance mode (Optional but recommended)
+            php artisan down || true
+
+            # 2. PULL THE NEW CODE (The missing step!)
+            git pull origin main
+
+            # 3. Clean up cache files
             rm -f bootstrap/cache/*.php
-  
-            # 2. Re-install without scripts to prevent timeout crashes
+
+            # 4. Install dependencies
+            # Note: Ensure your Hostinger PHP version matches your local version
             composer install --no-dev --no-scripts --optimize-autoloader
-  
-            # 3. Regenerate the fresh server cache
-            php artisan config:clear
-            php artisan cache:clear
-            php artisan view:clear
-  
-            # 4. Fix folder permissions (Crucial for Hostinger)
+
+            # 5. Run Database Migrations
+            # --force is required to run migrations in production
+            php artisan migrate --force
+
+            # 6. Optimized Caching for Production
+            php artisan config:cache
+            php artisan route:cache
+            php artisan view:cache
+
+            # 7. Permissions
             chmod -R 775 storage bootstrap/cache
+
+            # 8. Bring site back up
+            php artisan up || true
