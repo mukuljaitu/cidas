@@ -206,6 +206,7 @@
             currentCard.replaceWith(nextCard);
             initAlphaTableSort();
             closeAllPopovers();
+            syncFiltersBarFromUrl(url);
             if (pushState) window.history.pushState({}, '', url);
         } catch (err) {
             if (err && err.name === 'AbortError') return;
@@ -319,6 +320,118 @@
         if (chip) {
             const active = String(value).trim() !== '' && String(value) !== 'All';
             chip.classList.toggle('active', active);
+        }
+    }
+
+    function safeCssEscape(value) {
+        const raw = String(value ?? '');
+        if (window.CSS && typeof window.CSS.escape === 'function') return window.CSS.escape(raw);
+        return raw.replace(/["\\]/g, '\\$&');
+    }
+
+    function setSelectedOptionByAttr(attr, value) {
+        const card = document.getElementById('mainCard');
+        if (!card) return;
+        const items = Array.from(card.querySelectorAll(`.option-item[${attr}]`));
+        if (items.length === 0) return;
+        items.forEach((el) => el.classList.remove('selected'));
+        const match = card.querySelector(`.option-item[${attr}="${safeCssEscape(value)}"]`);
+        if (match instanceof HTMLElement) match.classList.add('selected');
+    }
+
+    function inferLabelFromOption(valueAttr, value, labelAttr = null) {
+        const card = document.getElementById('mainCard');
+        if (!card) return String(value ?? '');
+        const opt = card.querySelector(`.option-item[${valueAttr}="${safeCssEscape(value)}"]`);
+        if (!(opt instanceof HTMLElement)) return String(value ?? '');
+        if (labelAttr) {
+            const explicit = opt.getAttribute(labelAttr);
+            if (explicit !== null && explicit !== undefined && String(explicit).trim() !== '') return explicit;
+        }
+        const txt = (opt.textContent || '').replace(/\s+/g, ' ').trim();
+        return txt || String(value ?? '');
+    }
+
+    function syncFiltersBarFromUrl(url) {
+        const form = document.querySelector('#mainCard form.filters-bar');
+        if (!(form instanceof HTMLFormElement)) return;
+
+        let u = null;
+        try {
+            u = new URL(url, window.location.origin);
+        } catch {
+            u = null;
+        }
+        if (!u) return;
+
+        const mappings = [
+            { key: 'name', param: 'name', inputId: 'filterNameInput', attr: 'data-filter-name' },
+            { key: 'status', param: 'status', inputId: 'filterStatusInput', attr: 'data-filter-status' },
+            { key: 'role', param: 'role', inputId: 'filterRoleInput', attr: 'data-filter-role' },
+            { key: 'state', param: 'state', inputId: 'filterStateInput', attr: 'data-filter-state' },
+            { key: 'month', param: 'month', inputId: 'filterMonthInput', attr: 'data-filter-month' },
+            { key: 'district', param: 'district', inputId: 'filterDistrictInput', attr: 'data-filter-district' },
+            { key: 'type', param: 'type', inputId: 'filterTypeInput', attr: 'data-filter-type' },
+            { key: 'employee', param: 'employee_id', inputId: 'filterEmployeeInput', attr: 'data-filter-employee', labelAttr: 'data-filter-employee-label' },
+        ];
+
+        mappings.forEach((m) => {
+            const input = document.getElementById(m.inputId);
+            if (!(input instanceof HTMLInputElement)) return;
+            let nextVal = '';
+            if (u.searchParams.has(m.param)) {
+                nextVal = u.searchParams.get(m.param) ?? '';
+            } else {
+                const hasAll = m.attr ? !!document.querySelector(`#mainCard .option-item[${m.attr}="All"]`) : false;
+                nextVal = hasAll ? 'All' : input.defaultValue;
+            }
+            input.value = nextVal;
+
+            const displayValue = m.attr ? inferLabelFromOption(m.attr, nextVal, m.labelAttr || null) : nextVal;
+            updateChipLabelAndState(m.key, displayValue);
+
+            if (m.attr) setSelectedOptionByAttr(m.attr, nextVal);
+        });
+
+        const missingInput = document.getElementById('filterMissingInput');
+        if (missingInput instanceof HTMLInputElement) {
+            const next = u.searchParams.has('missing') ? (u.searchParams.get('missing') ?? '') : '0';
+            missingInput.value = next;
+        }
+
+        const missingMinSel = form.querySelector('select[name="missing_min"]');
+        if (missingMinSel instanceof HTMLSelectElement) {
+            const fallback =
+                missingMinSel.querySelector('option[selected]')?.value ||
+                (missingMinSel.options && missingMinSel.options[0] ? missingMinSel.options[0].value : '') ||
+                missingMinSel.value;
+            const next = u.searchParams.has('missing_min') ? (u.searchParams.get('missing_min') ?? '') : fallback;
+            if (next) missingMinSel.value = next;
+        }
+
+        const sections = u.searchParams.getAll('missing_sections[]');
+        if (sections.length > 0) {
+            const boxes = Array.from(form.querySelectorAll('input[name="missing_sections[]"]'));
+            boxes.forEach((b) => {
+                if (!(b instanceof HTMLInputElement)) return;
+                b.checked = sections.includes(b.value);
+            });
+        } else {
+            const boxes = Array.from(form.querySelectorAll('input[name="missing_sections[]"]'));
+            boxes.forEach((b) => {
+                if (!(b instanceof HTMLInputElement)) return;
+                b.checked = false;
+            });
+        }
+
+        updateMissingChipFromForm(form);
+        const popover = document.getElementById('popover-missing');
+        if (popover instanceof HTMLElement) {
+            const toggle = popover.querySelector('[data-missing-toggle]');
+            if (toggle instanceof HTMLInputElement && missingInput instanceof HTMLInputElement) {
+                toggle.checked = missingInput.value === '1';
+            }
+            setMissingInputsEnabled(popover, missingInput instanceof HTMLInputElement ? missingInput.value === '1' : false);
         }
     }
 
