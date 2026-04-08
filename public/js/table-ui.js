@@ -207,6 +207,7 @@
             initAlphaTableSort();
             closeAllPopovers();
             syncFiltersBarFromUrl(url);
+            if (typeof applyGlobalSearch === 'function') applyGlobalSearch();
             if (pushState) window.history.pushState({}, '', url);
         } catch (err) {
             if (err && err.name === 'AbortError') return;
@@ -699,6 +700,44 @@
             if (e.key === 'Enter') e.preventDefault();
         });
     }
+
+    // --- Global Search (Client-side Table Filter) ---
+    function applyGlobalSearch() {
+        const globalSearch = document.getElementById('globalSearch');
+        if (!globalSearch) return;
+        const term = globalSearch.value.toLowerCase().trim();
+        const card = document.getElementById('tableCard');
+        if (!card) return;
+        const tbody = card.querySelector('tbody');
+        if (!tbody) return;
+
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        rows.forEach(row => {
+            const firstCell = row.cells && row.cells[0];
+            const isColspanRow = firstCell instanceof HTMLTableCellElement && firstCell.hasAttribute('colspan') && row.cells.length === 1;
+            if (isColspanRow) return;
+
+            const text = (row.textContent || '').toLowerCase();
+            row.style.display = text.includes(term) ? '' : 'none';
+        });
+    }
+
+    const globalSearch = document.getElementById('globalSearch');
+    if (globalSearch) {
+        globalSearch.addEventListener('input', applyGlobalSearch);
+    }
+
+    document.addEventListener('click', (e) => {
+        const clearBtn = e.target.closest('.google-search-clear');
+        if (clearBtn) {
+            const input = clearBtn.previousElementSibling;
+            if (input && input.id === 'globalSearch') {
+                input.value = '';
+                input.dispatchEvent(new Event('input'));
+                input.focus();
+            }
+        }
+    });
 
     if (filtersBarForm) {
         filtersBarForm.addEventListener('change', (e) => {
