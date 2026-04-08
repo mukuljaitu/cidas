@@ -20,23 +20,13 @@ jobs:
           port: 65002
           script: |
             cd /home/u506903612/domains/cidas.cropcarechemical.com/public_html/
-            # git pull origin main
-            # composer install --no-dev --optimize-autoloader
-            # php artisan migrate --force
-            # php artisan config:cache
-            # php artisan route:cache
-            # php artisan view:cache
-            # 1. Fetch the latest metadata from GitHub
-            git fetch --all
-  
-            # 2. FORCE the local server files to match GitHub exactly
-            # WARNING: This deletes any manual changes made directly on the Hostinger File Manager
-            git reset --hard origin/main
-  
-            # 3. Clean up untracked files (removes old junk)
-            git clean -fd
-  
-            # 4. Standard Laravel optimizations
+            # 1. Restore the core Laravel files
             composer install --no-dev --optimize-autoloader
-            php artisan migrate --force
+  
+            # 2. Rebuild the cache (this usually fixes 500 errors)
             php artisan optimize:clear
+            php artisan config:cache
+            php artisan view:cache
+  
+            # 3. Fix permissions (Hostinger sometimes gets picky)
+            chmod -R 775 storage bootstrap/cache
