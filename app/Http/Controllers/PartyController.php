@@ -135,10 +135,10 @@ class PartyController extends Controller
         $parties = $query->paginate($request->get('pageSize', 50))->withQueryString();
 
         $names = Party::query()->select('name')->distinct()->orderBy('name')->pluck('name');
-        $statuses = Party::query()->select('status')->whereNotNull('status')->distinct()->orderBy('status')->pluck('status')->prepend('All');
-        $districts = Party::query()->select('district')->whereNotNull('district')->distinct()->orderBy('district')->pluck('district')->prepend('All');
-        $states = Party::query()->select('state')->whereNotNull('state')->distinct()->orderBy('state')->pluck('state')->prepend('All');
-        $types = Party::query()->select('party_type')->whereNotNull('party_type')->distinct()->orderBy('party_type')->pluck('party_type')->prepend('All');
+        $statuses = Party::query()->select('status')->whereNotNull('status')->distinct()->orderBy('status')->pluck('status');
+        $districts = Party::query()->select('district')->whereNotNull('district')->distinct()->orderBy('district')->pluck('district');
+        $states = Party::query()->select('state')->whereNotNull('state')->distinct()->orderBy('state')->pluck('state');
+        $types = Party::query()->select('party_type')->whereNotNull('party_type')->distinct()->orderBy('party_type')->pluck('party_type');
 
         $salesmanRoleIds = $this->salesmanRoleIds();
         $employeeOptions = $this->salesmanEmployeeOptions($salesmanRoleIds);
