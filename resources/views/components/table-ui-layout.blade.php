@@ -20,7 +20,7 @@
                             <path d="M7 10l5 5 5-5H7z" />
                         </svg>
                     </button>
-                    <div id="popover-export" class="popover">
+                    <div id="popover-export" class="popover popover-right">
                         <div class="popover-header">Download Data</div>
                         <div class="popover-content">
                             <div class="options-list">

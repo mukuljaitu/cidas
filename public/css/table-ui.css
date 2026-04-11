@@ -127,6 +127,11 @@ input[type='submit']:disabled {
     margin-top: 6px;
 }
 
+.popover.popover-right {
+    left: auto;
+    right: 0;
+}
+
 .popover.show {
     display: block;
 }
