@@ -1,4 +1,4 @@
-name: Deploy Laravel Site
+name: Deploy to Hostinger
 
 on:
   push:
@@ -8,44 +8,17 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
-
-      - name: Deploy to Hostinger via SSH
+      - name: Deploy via SSH
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
-          key: ${{ secrets.SSH_KEY }}
-          port: 65002
+          password: ${{ secrets.PASSWORD }}
+          port: ${{ secrets.PORT }}
           script: |
-            cd /home/u506903612/domains/cidas.cropcarechemical.com/public_html/
-            
-            # 1. Put site in maintenance mode (Optional but recommended)
-            php artisan down || true
-
-            # 2. PULL THE NEW CODE (The missing step!)
+            cd domains/cidas.cropcarechemical.com/public_html
             git pull origin main
+            composer install --no-dev --optimize-autoloader
             npm install
             npm run build
-            # 3. Clean up cache files
-            rm -f bootstrap/cache/*.php
-
-            # 4. Install dependencies
-            # Note: Ensure your Hostinger PHP version matches your local version
-            composer install --no-dev --no-scripts --optimize-autoloader
-
-            # 5. Run Database Migrations
-            # --force is required to run migrations in production
-            php artisan migrate --force
-
-            # 6. Optimized Caching for Production
-            php artisan config:cache
-            php artisan route:cache
-            php artisan view:cache
-
-            # 7. Permissions
-            chmod -R 775 storage bootstrap/cache
-
-            # 8. Bring site back up
-            php artisan up || true
+            php artisan optimize:clear
