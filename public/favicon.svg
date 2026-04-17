@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <g fill="none" stroke="#0B57D0" stroke-linecap="round" stroke-linejoin="round">
+    <g stroke-width="20">
+      <circle cx="128" cy="128" r="78"/>
+      <g>
+        <rect x="120" y="14" width="16" height="42" rx="8" ry="8"/>
+        <rect x="120" y="200" width="16" height="42" rx="8" ry="8"/>
+        <rect x="14" y="120" width="42" height="16" rx="8" ry="8"/>
+        <rect x="200" y="120" width="42" height="16" rx="8" ry="8"/>
+      </g>
+      <g transform="translate(128 128)">
+        <g transform="rotate(45)">
+          <rect x="-8" y="-112" width="16" height="42" rx="8" ry="8"/>
+          <rect x="-8" y="70" width="16" height="42" rx="8" ry="8"/>
+          <rect x="-112" y="-8" width="42" height="16" rx="8" ry="8"/>
+          <rect x="70" y="-8" width="42" height="16" rx="8" ry="8"/>
+        </g>
+      </g>
+    </g>
+    <g stroke-width="16">
+      <path d="M104 134v-10c0-13.255 10.745-24 24-24s24 10.745 24 24v10"/>
+      <rect x="96" y="134" width="64" height="60" rx="16" ry="16"/>
+      <path d="M128 162v10"/>
+      <circle cx="128" cy="158" r="6" fill="#0B57D0" stroke="none"/>
+    </g>
+  </g>
+</svg>

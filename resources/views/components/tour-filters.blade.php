@@ -9,7 +9,7 @@
 @php
 $selectedName = request('name', 'All');
 $selectedStatus = request('status', 'All');
-$selectedState = request('state', 'Punjab');
+$selectedState = request('state', 'All');
 $selectedMonth = request('month', 'All');
 $selectedDateStart = request('date_start');
 $selectedDateEnd = request('date_end');
@@ -120,6 +120,7 @@ $selectedStatusLabel = $selectedStatus === '1' ? 'Tour' : $selectedStatus;
          <div class="popover-header">Filter by State</div>
          <div class="popover-content">
             <div id="stateOptions" class="options-list">
+               <button type="button" class="option-item {{ $selectedState === 'All' ? 'selected' : '' }}" data-filter-state="All">All States</button>
                @foreach($states as $state)
                <button type="button" class="option-item {{ $selectedState === $state ? 'selected' : '' }}" data-filter-state="{{ $state }}">{{ $state }}</button>
                @endforeach
