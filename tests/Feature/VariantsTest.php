@@ -44,6 +44,41 @@ class VariantsTest extends TestCase
         ]);
     }
 
+    public function test_user_can_bulk_create_variants_by_comma_separated_size_from_products_page(): void
+    {
+        $user = User::factory()->create();
+
+        $product = Product::create([
+            'company_id' => 1,
+            'display_id' => 'PRD-'.strtoupper(Str::random(6)),
+            'name' => 'Product A',
+            'description' => null,
+            'created_by' => $user->id,
+        ]);
+
+        $response = $this->actingAs($user)->post('/variants', [
+            'redirect_to' => 'products',
+            'product_id' => (string) $product->id,
+            'name' => '100, 250, 500ml Bottles',
+            'sku' => 'Bottles',
+            'unit' => 'ml',
+            'size' => '100, 250, 500',
+        ]);
+
+        $response->assertRedirect('/products');
+        $this->assertDatabaseCount('variants', 3);
+
+        foreach (['100', '250', '500'] as $size) {
+            $this->assertDatabaseHas('variants', [
+                'product_id' => $product->id,
+                'name' => "{$size}ml Bottles",
+                'sku' => 'Bottles',
+                'unit' => 'ml',
+                'size' => $size,
+            ]);
+        }
+    }
+
     public function test_user_can_update_variant(): void
     {
         $user = User::factory()->create();
