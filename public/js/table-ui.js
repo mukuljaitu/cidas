@@ -807,6 +807,59 @@
 
     initAlphaTableSort();
 
+    function initNotificationsMenu() {
+        const trigger = document.querySelector('[data-notifications-trigger]');
+        const menu = document.getElementById('notificationsMenu');
+        if (!(trigger instanceof HTMLElement) || !(menu instanceof HTMLElement)) return;
+        if (menu.dataset.init === '1') return;
+        menu.dataset.init = '1';
+
+        const open = () => {
+            menu.classList.remove('hidden');
+            trigger.setAttribute('aria-expanded', 'true');
+        };
+
+        const close = () => {
+            menu.classList.add('hidden');
+            trigger.setAttribute('aria-expanded', 'false');
+        };
+
+        const toggle = () => {
+            if (menu.classList.contains('hidden')) open();
+            else close();
+        };
+
+        trigger.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            toggle();
+        });
+
+        document.addEventListener('click', (e) => {
+            if (menu.classList.contains('hidden')) return;
+            const target = e.target;
+            if (!(target instanceof HTMLElement)) return;
+            if (target.closest('#notificationsMenu')) return;
+            if (target.closest('[data-notifications-trigger]')) return;
+            close();
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') close();
+        });
+
+        const composeToggle = menu.querySelector('[data-notification-compose-toggle]');
+        const composeForm = menu.querySelector('[data-notification-compose-form]');
+        if (composeToggle instanceof HTMLElement && composeForm instanceof HTMLElement) {
+            composeToggle.addEventListener('click', (e) => {
+                e.preventDefault();
+                composeForm.classList.toggle('hidden');
+            });
+        }
+    }
+
+    initNotificationsMenu();
+
     if (!mainCard && !addPanel) return;
 
     function openAddMember() {

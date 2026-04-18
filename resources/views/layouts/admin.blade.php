@@ -89,6 +89,7 @@
                 'profile-updated' => 'Profile updated successfully.',
                 'password-updated' => 'Password updated successfully.',
                 'verification-link-sent' => 'Verification link sent.',
+                'notification-sent' => 'Update sent to all users.',
                 ];
                 $statusText = $statusMessages[$statusKey] ?? 'Done.';
                 @endphp
