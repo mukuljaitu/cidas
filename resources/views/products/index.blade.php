@@ -283,7 +283,35 @@
                 return;
             }
 
-            variants.forEach((v) => {
+            const parseLeadingNumber = (value) => {
+                const str = String(value ?? '').trim();
+                const match = str.match(/^(\d+(?:\.\d+)?)/);
+                return match ? Number(match[1]) : null;
+            };
+
+            const sorted = [...variants].sort((a, b) => {
+                const aNum = parseLeadingNumber(a?.size);
+                const bNum = parseLeadingNumber(b?.size);
+                const aHasNum = aNum !== null && !Number.isNaN(aNum);
+                const bHasNum = bNum !== null && !Number.isNaN(bNum);
+
+                if (aHasNum !== bHasNum) return aHasNum ? -1 : 1;
+                if (aHasNum && bHasNum && aNum !== bNum) return aNum - bNum;
+
+                const aUnit = String(a?.unit ?? '').trim().toLowerCase();
+                const bUnit = String(b?.unit ?? '').trim().toLowerCase();
+                if (aUnit !== bUnit) return aUnit.localeCompare(bUnit);
+
+                const aName = String(a?.name ?? '').trim().toLowerCase();
+                const bName = String(b?.name ?? '').trim().toLowerCase();
+                if (aName !== bName) return aName.localeCompare(bName);
+
+                const aId = Number(a?.id ?? 0);
+                const bId = Number(b?.id ?? 0);
+                return aId - bId;
+            });
+
+            sorted.forEach((v) => {
                 const sizeUnit = `${v.size || ''}${v.unit || ''}`.trim();
                 const extra = [sizeUnit, v.sku].filter(Boolean).join(' • ');
                 const row = document.createElement('div');

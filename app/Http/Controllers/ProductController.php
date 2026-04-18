@@ -36,8 +36,51 @@ class ProductController extends Controller
     public function variants(Product $product)
     {
         $variants = $product->variants()
-            ->orderBy('id', 'desc')
-            ->get(['id', 'display_id', 'name', 'sku', 'unit', 'size', 'created_at']);
+            ->get(['id', 'display_id', 'name', 'sku', 'unit', 'size', 'created_at'])
+            ->sort(function ($a, $b) {
+                $extractLeadingNumber = static function ($value): ?float {
+                    $value = trim((string) ($value ?? ''));
+                    if ($value === '') {
+                        return null;
+                    }
+                    if (preg_match('/^\s*([0-9]+(?:\.[0-9]+)?)/', $value, $m) !== 1) {
+                        return null;
+                    }
+
+                    return (float) $m[1];
+                };
+
+                $aNum = $extractLeadingNumber($a->size);
+                $bNum = $extractLeadingNumber($b->size);
+                $aHasNum = $aNum !== null;
+                $bHasNum = $bNum !== null;
+
+                if ($aHasNum !== $bHasNum) {
+                    return $aHasNum ? -1 : 1;
+                }
+
+                if ($aHasNum && $bHasNum) {
+                    $cmp = $aNum <=> $bNum;
+                    if ($cmp !== 0) {
+                        return $cmp;
+                    }
+                }
+
+                $aUnit = strtolower(trim((string) ($a->unit ?? '')));
+                $bUnit = strtolower(trim((string) ($b->unit ?? '')));
+                if ($aUnit !== $bUnit) {
+                    return $aUnit <=> $bUnit;
+                }
+
+                $aName = strtolower(trim((string) ($a->name ?? '')));
+                $bName = strtolower(trim((string) ($b->name ?? '')));
+                if ($aName !== $bName) {
+                    return $aName <=> $bName;
+                }
+
+                return ((int) $a->id) <=> ((int) $b->id);
+            })
+            ->values();
 
         return response()->json([
             'product' => [
@@ -58,7 +101,7 @@ class ProductController extends Controller
         ]);
 
         do {
-            $displayId = 'PRD-' . strtoupper(Str::random(6));
+            $displayId = 'PRD-'.strtoupper(Str::random(6));
         } while (Product::query()->where('display_id', $displayId)->exists());
 
         $createdBy = optional($request->user())->id ?? 0;
