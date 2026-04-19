@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\BankController;
+use App\Http\Controllers\CityController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PartyController;
@@ -39,6 +40,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/transports', [TransportController::class, 'store']);
     Route::put('/transports/{transport}', [TransportController::class, 'update']);
     Route::delete('/transports/{transport}', [TransportController::class, 'destroy']);
+
+    Route::get('/cities', [CityController::class, 'index']);
+    Route::post('/cities', [CityController::class, 'store']);
+    Route::put('/cities/{city}', [CityController::class, 'update']);
+    Route::delete('/cities/{city}', [CityController::class, 'destroy']);
 
     Route::get('/products', [ProductController::class, 'index']);
     Route::get('/products/{product}/variants', [ProductController::class, 'variants']);

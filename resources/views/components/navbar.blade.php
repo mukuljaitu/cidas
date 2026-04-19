@@ -11,6 +11,7 @@ $analyseItems = [
 $assetsItems = [
 ['label' => 'Employees', 'url' => url('/employees'), 'active' => request()->is('employees*')],
 ['label' => 'Parties', 'url' => url('/parties'), 'active' => request()->is('parties*')],
+['label' => 'Cities', 'url' => url('/cities'), 'active' => request()->is('cities*')],
 ['label' => 'Products', 'url' => url('/products'), 'active' => request()->is('products*')],
 ['label' => 'Variants', 'url' => url('/variants'), 'active' => request()->is('variants*')],
 ['label' => 'Transports', 'url' => url('/transports'), 'active' => request()->is('transports*')],

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\City;
 use App\Models\Employee;
 use App\Models\EmployeeLegacy;
 use App\Models\Party;
@@ -53,12 +54,17 @@ class TourController extends Controller
         $parties = Party::query()
             ->whereIn('employee_id', $employeeIds)
             ->get(['id', 'employee_id', 'name', 'city']);
+        $manualCities = City::query()
+            ->whereIn('employee_id', $employeeIds)
+            ->get(['employee_id', 'city']);
 
         $byEmployee = $parties->groupBy('employee_id');
+        $manualByEmployee = $manualCities->groupBy('employee_id');
 
         $data = [];
         foreach ($employees as $emp) {
             $empParties = $byEmployee->get($emp->id, collect());
+            $empManualCities = $manualByEmployee->get($emp->id, collect());
 
             $cityMap = [];
             $cityPartyCount = [];
@@ -81,6 +87,20 @@ class TourController extends Controller
                 $cityPartyCount[$displayCity] = ($cityPartyCount[$displayCity] ?? 0) + 1;
                 if ((string) $p->name !== '') {
                     $cityParties[$displayCity][] = (string) $p->name;
+                }
+            }
+
+            foreach ($empManualCities as $manualCityRow) {
+                $rawCity = trim((string) $manualCityRow->city);
+                if ($rawCity === '') {
+                    continue;
+                }
+
+                $key = mb_strtolower($rawCity);
+                if (! isset($cityMap[$key])) {
+                    $cityMap[$key] = $rawCity;
+                    $cityPartyCount[$rawCity] = 0;
+                    $cityParties[$rawCity] = [];
                 }
             }
 
@@ -267,6 +287,9 @@ class TourController extends Controller
         $parties = Party::query()
             ->where('employee_id', $employeeId)
             ->get(['id', 'name', 'city']);
+        $manualCities = City::query()
+            ->where('employee_id', $employeeId)
+            ->get(['city']);
 
         $cityMap = [];
         $cityPartyCount = [];
@@ -289,6 +312,20 @@ class TourController extends Controller
             $cityPartyCount[$displayCity] = ($cityPartyCount[$displayCity] ?? 0) + 1;
             if ((string) $p->name !== '') {
                 $cityParties[$displayCity][] = (string) $p->name;
+            }
+        }
+
+        foreach ($manualCities as $manualCityRow) {
+            $rawCity = trim((string) $manualCityRow->city);
+            if ($rawCity === '') {
+                continue;
+            }
+
+            $key = mb_strtolower($rawCity);
+            if (! isset($cityMap[$key])) {
+                $cityMap[$key] = $rawCity;
+                $cityPartyCount[$rawCity] = 0;
+                $cityParties[$rawCity] = [];
             }
         }
 
@@ -352,12 +389,21 @@ class TourController extends Controller
         $isSupervisor = $request->has('is_supervisor');
         $status = $request->status;
         $cities = $request->cities ?? [];
-        $allowedCities = Party::query()
+        $partyCities = Party::query()
             ->where('employee_id', $employeeModel->id)
             ->whereNotNull('city')
             ->pluck('city')
             ->map(fn($c) => trim((string) $c))
             ->filter()
+            ->values();
+        $manualCities = City::query()
+            ->where('employee_id', $employeeModel->id)
+            ->pluck('city')
+            ->map(fn ($c) => trim((string) $c))
+            ->filter()
+            ->values();
+        $allowedCities = $partyCities
+            ->merge($manualCities)
             ->unique()
             ->values();
 

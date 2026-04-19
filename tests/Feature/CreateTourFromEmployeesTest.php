@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\City;
 use App\Models\Employee;
 use App\Models\Party;
 use App\Models\Role;
@@ -63,7 +64,7 @@ class CreateTourFromEmployeesTest extends TestCase
         $response->assertDontSee('Sales Rajasthan');
     }
 
-    public function test_create_tour_uses_employee_parties_as_city_source(): void
+    public function test_create_tour_uses_employee_parties_and_manual_cities_as_city_source(): void
     {
         $user = User::factory()->create();
 
@@ -90,6 +91,11 @@ class CreateTourFromEmployeesTest extends TestCase
             'status' => 'Active',
         ]);
 
+        City::create([
+            'employee_id' => $sales->id,
+            'city' => 'Jaipur',
+        ]);
+
         $response = $this->actingAs($user)->post('/create-tour?state=Punjab', [
             'employee_id' => (string) $sales->id,
             'tour_date' => now()->toDateString(),
@@ -104,14 +110,27 @@ class CreateTourFromEmployeesTest extends TestCase
             'status' => '1',
         ]);
 
-        $bad = $this->actingAs($user)->post('/create-tour?state=Punjab', [
+        $manualCity = $this->actingAs($user)->post('/create-tour?state=Punjab', [
             'employee_id' => (string) $sales->id,
             'tour_date' => now()->toDateString(),
             'cities' => ['Jaipur'],
         ]);
 
+        $manualCity->assertRedirect('/create-tour?state=Punjab');
+        $this->assertDatabaseHas('tours', [
+            'employee_name' => 'Sales One',
+            'state' => 'Punjab',
+            'cities' => 'Jaipur',
+            'status' => '1',
+        ]);
+
+        $bad = $this->actingAs($user)->post('/create-tour?state=Punjab', [
+            'employee_id' => (string) $sales->id,
+            'tour_date' => now()->toDateString(),
+            'cities' => ['Udaipur'],
+        ]);
+
         $bad->assertRedirect();
-        $this->assertSame(1, Tour::query()->count());
+        $this->assertSame(2, Tour::query()->count());
     }
 }
-

@@ -28,4 +28,9 @@ class Employee extends Model
     {
         return $this->belongsToMany(Role::class)->withTimestamps();
     }
+
+    public function cities()
+    {
+        return $this->hasMany(City::class);
+    }
 }
