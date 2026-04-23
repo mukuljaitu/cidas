@@ -60,7 +60,7 @@
                 <!-- Logo & Menu -->
                 <div class="flex items-center gap-4">
                     <span class="text-xl font-semibold tracking-tight text-gray-900 dark:text-white">
-                        CIDAS
+                        CIDAS for <span class="text-green-600">CCCPL</span>
                     </span>
                 </div>
 
