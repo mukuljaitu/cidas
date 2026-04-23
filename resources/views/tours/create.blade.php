@@ -210,7 +210,7 @@ $statuses = [
                 <span class="text-sm font-bold text-gray-900">Total Tours:</span>
                 <span class="text-sm font-bold text-blue-600">{{ $tourCount }}</span>
             </div>
-            <a href="#" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-bold rounded-xl transition-all shadow-sm">
+            <a href="{{ route('tours.index', ['state' => $state]) }}" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-bold rounded-xl transition-all shadow-sm">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                 </svg>
@@ -351,8 +351,53 @@ $statuses = [
     const salesmanCityData = @json($salesmanCityData);
     const tourCitiesUrl = @json(route('tours.cities'));
     const cityCache = {};
-    let baseDate = new Date();
-    let activeSelectedDate = new Date();
+    let baseDate = null;
+    let activeSelectedDate = null;
+
+    function parseYmdToLocalDate(ymd) {
+        const parts = String(ymd || '').split('-').map(Number);
+        if (parts.length !== 3 || parts.some(n => Number.isNaN(n))) return new Date();
+        return new Date(parts[0], parts[1] - 1, parts[2]);
+    }
+
+    function toLocalYmd(d) {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+    }
+
+    function syncSelectedDateInput() {
+        const el = document.getElementById('dateInput');
+        if (!el || !activeSelectedDate) return;
+        el.value = toLocalYmd(activeSelectedDate);
+    }
+
+    function normalizeSelectedDate() {
+        if (!activeSelectedDate) return;
+        activeSelectedDate.setHours(0, 0, 0, 0);
+        if (activeSelectedDate.getDay() === 0) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const forward = new Date(activeSelectedDate);
+            forward.setDate(forward.getDate() + 1);
+            forward.setHours(0, 0, 0, 0);
+            if (forward <= today) {
+                activeSelectedDate = forward;
+            } else {
+                activeSelectedDate.setDate(activeSelectedDate.getDate() - 1);
+            }
+        }
+        if (baseDate && baseDate > activeSelectedDate) baseDate = new Date(activeSelectedDate);
+        syncSelectedDateInput();
+    }
+
+    (function initDates() {
+        const initial = parseYmdToLocalDate(document.getElementById('dateInput')?.value);
+        baseDate = new Date(initial);
+        activeSelectedDate = new Date(initial);
+        normalizeSelectedDate();
+    })();
 
     function openTourForm(employeeId, employeeName) {
         document.getElementById('tourForm').classList.remove('hidden');
@@ -375,18 +420,21 @@ $statuses = [
         const days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
         const today = new Date();
         today.setHours(0, 0, 0, 0);
+        normalizeSelectedDate();
 
         for (let i = 0; i < 14; i++) {
             const d = new Date(baseDate);
             d.setDate(baseDate.getDate() + i);
             const isFuture = d > today;
+            const isSunday = d.getDay() === 0;
+            const isDisabled = isFuture || isSunday;
             const pill = document.createElement('div');
-            pill.className = 'date-pill' + (d.toDateString() === activeSelectedDate.toDateString() ? ' active' : '') + (isFuture ? ' disabled' : '');
+            pill.className = 'date-pill' + (d.toDateString() === activeSelectedDate.toDateString() ? ' active' : '') + (isDisabled ? ' disabled' : '');
             pill.innerHTML = `<span class="text-[10px] font-bold opacity-70">${days[d.getDay()]}</span><span class="text-xl font-black">${d.getDate()}</span>`;
-            if (!isFuture) {
+            if (!isDisabled) {
                 pill.onclick = () => {
                     activeSelectedDate = new Date(d);
-                    document.getElementById('dateInput').value = d.toISOString().split('T')[0];
+                    normalizeSelectedDate();
                     renderDates();
                     updateSummary();
                 };
