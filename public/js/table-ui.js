@@ -878,6 +878,10 @@
             getFormFields(form).forEach((n) => {
                 const el = form.querySelector(`[name="${n}"]`);
                 if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+                    if (el instanceof HTMLInputElement && el.type === 'checkbox') {
+                        el.checked = false;
+                        return;
+                    }
                     el.value = '';
                 } else if (el instanceof HTMLSelectElement) {
                     if (el.options.length > 0) el.selectedIndex = 0;
@@ -910,6 +914,11 @@
             const el = form.querySelector(`[name="${n}"]`);
             const v = getTriggerValue(trigger, n);
             if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+                if (el instanceof HTMLInputElement && el.type === 'checkbox') {
+                    const normalized = (v || '').toString().trim().toLowerCase();
+                    el.checked = normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on';
+                    return;
+                }
                 el.value = v;
             } else if (el instanceof HTMLSelectElement && v) {
                 el.value = v;

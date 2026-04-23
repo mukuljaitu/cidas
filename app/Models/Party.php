@@ -25,6 +25,7 @@ class Party extends Model
         'employee_id',
         'created_by_email',
         'status',
+        'is_verified',
         'party_type',
         'pan_no',
         'aadhar_card',
@@ -37,6 +38,10 @@ class Party extends Model
         'stamp',
         'sign',
         'pic',
+    ];
+
+    protected $casts = [
+        'is_verified' => 'boolean',
     ];
 
     public function employee()
