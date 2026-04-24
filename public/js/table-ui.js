@@ -1,3 +1,5 @@
+//Testing change
+
 (() => {
     const mainCard = document.getElementById('mainCard');
     const tableTitle = mainCard ? mainCard.querySelector('.table-title') : null;
