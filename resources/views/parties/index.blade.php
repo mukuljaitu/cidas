@@ -552,11 +552,10 @@
         if (status === 'party-created' || status === 'party-updated') {
             try {
                 window.localStorage.removeItem('cidas:party:draft:new');
-            } catch {
-            }
+            } catch {}
         }
     })();
 </script>
 @endpush
-
+Testing change
 @endsection
