@@ -862,6 +862,103 @@
 
     if (!mainCard && !addPanel) return;
 
+    function getDraftKey() {
+        const key = addPanel && addPanel.getAttribute('data-draft-key');
+        return key && String(key).trim() ? String(key).trim() : '';
+    }
+
+    function loadDraft(key) {
+        if (!key) return null;
+        try {
+            const raw = window.localStorage ? window.localStorage.getItem(key) : null;
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            if (!parsed || typeof parsed !== 'object') return null;
+            if (!parsed.values || typeof parsed.values !== 'object') return null;
+            return parsed;
+        } catch {
+            return null;
+        }
+    }
+
+    function saveDraft(key, values) {
+        if (!key) return;
+        try {
+            if (!window.localStorage) return;
+            window.localStorage.setItem(key, JSON.stringify({ values, updatedAt: Date.now() }));
+        } catch {
+        }
+    }
+
+    function clearDraft(key) {
+        if (!key) return;
+        try {
+            if (!window.localStorage) return;
+            window.localStorage.removeItem(key);
+        } catch {
+        }
+    }
+
+    function readFormValues(form, fields) {
+        if (!(form instanceof HTMLFormElement)) return {};
+        const values = {};
+        (fields || []).forEach((n) => {
+            const el = form.querySelector(`[name="${n}"]`);
+            if (el instanceof HTMLInputElement) {
+                const type = (el.type || '').toLowerCase();
+                if (type === 'file') return;
+                if (type === 'checkbox') {
+                    values[n] = el.checked ? '1' : '';
+                    return;
+                }
+                values[n] = el.value ?? '';
+                return;
+            }
+            if (el instanceof HTMLTextAreaElement) {
+                values[n] = el.value ?? '';
+                return;
+            }
+            if (el instanceof HTMLSelectElement) {
+                values[n] = el.value ?? '';
+            }
+        });
+        return values;
+    }
+
+    function applyFormValues(form, values) {
+        if (!(form instanceof HTMLFormElement)) return;
+        if (!values || typeof values !== 'object') return;
+        Object.keys(values).forEach((n) => {
+            const el = form.querySelector(`[name="${n}"]`);
+            const v = values[n] ?? '';
+            if (el instanceof HTMLInputElement) {
+                const type = (el.type || '').toLowerCase();
+                if (type === 'file') return;
+                if (type === 'checkbox') {
+                    const normalized = String(v).trim().toLowerCase();
+                    el.checked = normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on';
+                    return;
+                }
+                el.value = String(v);
+                return;
+            }
+            if (el instanceof HTMLTextAreaElement) {
+                el.value = String(v);
+                return;
+            }
+            if (el instanceof HTMLSelectElement) {
+                el.value = String(v);
+            }
+        });
+    }
+
+    function isNewMode(form) {
+        if (!(form instanceof HTMLFormElement)) return false;
+        const methodInput = form.querySelector('input[name="_method"]');
+        const method = methodInput instanceof HTMLInputElement ? (methodInput.value || '').trim().toUpperCase() : '';
+        return method === '';
+    }
+
     function openAddMember() {
         if (!addPanel) return;
         addPanel.classList.remove('translate-x-full');
@@ -875,18 +972,26 @@
             const methodInput = form.querySelector('input[name="_method"]');
             if (methodInput instanceof HTMLInputElement) methodInput.value = '';
 
-            getFormFields(form).forEach((n) => {
-                const el = form.querySelector(`[name="${n}"]`);
-                if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
-                    if (el instanceof HTMLInputElement && el.type === 'checkbox') {
-                        el.checked = false;
-                        return;
+            const fields = getFormFields(form);
+            const draftKey = getDraftKey();
+            const draft = draftKey ? loadDraft(draftKey) : null;
+            if (draft && draft.values) {
+                applyFormValues(form, draft.values);
+            } else {
+                fields.forEach((n) => {
+                    const el = form.querySelector(`[name="${n}"]`);
+                    if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+                        if (el instanceof HTMLInputElement && el.type === 'checkbox') {
+                            el.checked = false;
+                            return;
+                        }
+                        if (el instanceof HTMLInputElement && el.type === 'file') return;
+                        el.value = '';
+                    } else if (el instanceof HTMLSelectElement) {
+                        if (el.options.length > 0) el.selectedIndex = 0;
                     }
-                    el.value = '';
-                } else if (el instanceof HTMLSelectElement) {
-                    if (el.options.length > 0) el.selectedIndex = 0;
-                }
-            });
+                });
+            }
 
             const deleteBtn = addPanel.querySelector('[data-delete-member]');
             if (deleteBtn) deleteBtn.style.display = 'none';
@@ -973,6 +1078,30 @@
             return;
         }
 
+        const clearBtn = target.closest('[data-add-member-clear-all]');
+        if (clearBtn) {
+            const form = addPanel && addPanel.querySelector('form#memberForm');
+            if (form instanceof HTMLFormElement && isNewMode(form)) {
+                const fields = getFormFields(form);
+                fields.forEach((n) => {
+                    const el = form.querySelector(`[name="${n}"]`);
+                    if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+                        if (el instanceof HTMLInputElement && el.type === 'checkbox') {
+                            el.checked = false;
+                            return;
+                        }
+                        if (el instanceof HTMLInputElement && el.type === 'file') return;
+                        el.value = '';
+                    } else if (el instanceof HTMLSelectElement) {
+                        if (el.options.length > 0) el.selectedIndex = 0;
+                    }
+                });
+                clearDraft(getDraftKey());
+                focusFirstField();
+            }
+            return;
+        }
+
         const cancelBtn = target.closest('[data-add-member-cancel]');
         if (cancelBtn) {
             closePanel();
@@ -996,6 +1125,20 @@
             closePanel();
         }
     });
+
+    const draftKey = getDraftKey();
+    const draftForm = addPanel && addPanel.querySelector('form#memberForm');
+    if (draftKey && draftForm instanceof HTMLFormElement) {
+        const handler = () => {
+            if (!isNewMode(draftForm)) return;
+            const values = readFormValues(draftForm, getFormFields(draftForm));
+            const hasAny = Object.values(values).some((v) => String(v ?? '').trim() !== '');
+            if (hasAny) saveDraft(draftKey, values);
+            else clearDraft(draftKey);
+        };
+        draftForm.addEventListener('input', handler);
+        draftForm.addEventListener('change', handler);
+    }
 
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') closePanel();

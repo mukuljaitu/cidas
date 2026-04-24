@@ -323,16 +323,22 @@
             data-entity-singular="Party"
             data-entity-plural="Parties"
             data-resource="{{ url('/parties') }}"
+            data-draft-key="cidas:party:draft:new"
             data-form-fields="name,company_code,alias,owner_name,mobile,gst_no,pan_no,aadhar_card,street_address,city,district,state,pin_code,employee_id,party_type,status,is_verified,pest_lic,fert_lic,seed_lic,cq1,cq2,stamp,sign,bank_name,bank_account_no,bank_ifsc"
             class="fixed inset-y-0 right-0 w-[560px] bg-white shadow-2xl border-l border-gray-200 transform translate-x-full transition-transform duration-300 z-50 overflow-y-auto">
             <div class="p-8">
                 <div class="flex items-center justify-between mb-8">
                     <h2 class="text-2xl font-bold text-gray-900" id="panelTitle">New</h2>
-                    <button type="button" data-add-member-cancel class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-lg transition-all">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                    </button>
+                    <div class="flex items-center gap-2">
+                        <button type="button" data-add-member-clear-all class="px-3 py-2 text-xs font-bold text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded-lg transition-all">
+                            Clear All
+                        </button>
+                        <button type="button" data-add-member-cancel class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-lg transition-all">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
 
                 <form id="memberForm" method="POST" action="{{ url('/parties') }}" enctype="multipart/form-data" class="space-y-6 pb-20">
@@ -534,7 +540,22 @@
         if (addBtn) {
             document.getElementById('picPreview').classList.add('hidden');
         }
+
+        const clearBtn = e.target.closest('[data-add-member-clear-all]');
+        if (clearBtn) {
+            document.getElementById('picPreview').classList.add('hidden');
+        }
     });
+
+    (() => {
+        const status = @json(session('status'));
+        if (status === 'party-created' || status === 'party-updated') {
+            try {
+                window.localStorage.removeItem('cidas:party:draft:new');
+            } catch {
+            }
+        }
+    })();
 </script>
 @endpush
 
