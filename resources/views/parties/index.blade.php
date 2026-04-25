@@ -27,6 +27,7 @@
                 <input type="hidden" name="state" id="filterStateInput" value="{{ request('state', 'All') }}">
                 <input type="hidden" name="type" id="filterTypeInput" value="{{ request('type', 'All') }}">
                 <input type="hidden" name="employee_id" id="filterEmployeeInput" value="{{ request('employee_id', 'All') }}">
+                <input type="hidden" name="verified" id="filterVerifiedInput" value="{{ request('verified', 'All') }}">
                 <input type="hidden" name="missing" id="filterMissingInput" value="{{ $missingEnabled ? '1' : '0' }}">
                 <div class="flex items-center flex-wrap gap-3 flex-1">
                     <div class="relative">
@@ -134,6 +135,25 @@
                                     @foreach($employeeOptions as $emp)
                                     <button type="button" class="option-item {{ (string) request('employee_id') === (string) $emp->id ? 'selected' : '' }}" data-filter-employee="{{ $emp->id }}" data-filter-employee-label="{{ $emp->name }}">{{ $emp->name }}</button>
                                     @endforeach
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="relative">
+                        <button type="button" id="chip-verified" class="filter-chip {{ request('verified', 'All') !== 'All' ? 'active' : '' }}" data-popover="popover-verified">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M9 12l2 2 4-4m5 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span id="label-verified">Verification: {{ request('verified', 'All') }}</span>
+                        </button>
+                        <div id="popover-verified" class="popover">
+                            <div class="popover-header">Verification</div>
+                            <div class="popover-content">
+                                <div class="options-list">
+                                    <button type="button" class="option-item {{ request('verified', 'All') === 'All' ? 'selected' : '' }}" data-filter-verified="All">All</button>
+                                    <button type="button" class="option-item {{ request('verified') === 'Verified' ? 'selected' : '' }}" data-filter-verified="Verified">Verified</button>
+                                    <button type="button" class="option-item {{ request('verified') === 'Pending' ? 'selected' : '' }}" data-filter-verified="Pending">Pending</button>
                                 </div>
                             </div>
                         </div>
@@ -557,5 +577,5 @@
     })();
 </script>
 @endpush
-Testing change
+
 @endsection

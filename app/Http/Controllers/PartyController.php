@@ -6,6 +6,7 @@ use App\Models\Employee;
 use App\Models\Party;
 use App\Models\Role;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
@@ -41,12 +42,13 @@ class PartyController extends Controller
         $district = $request->string('district')->toString();
         $state = $request->string('state')->toString();
         $type = $request->string('type')->toString();
+        $verified = $request->string('verified')->toString();
         $employeeIdRaw = $request->input('employee_id');
         $missing = $request->boolean('missing');
         $missingMin = (int) $request->input('missing_min', 1);
         $missingMin = max(1, min($missingMin, 25));
         $missingSections = $request->input('missing_sections', []);
-        if (!is_array($missingSections)) {
+        if (! is_array($missingSections)) {
             $missingSections = [$missingSections];
         }
 
@@ -70,6 +72,15 @@ class PartyController extends Controller
 
         if ($type !== '' && $type !== 'All') {
             $query->where('party_type', $type);
+        }
+
+        if ($verified !== '' && $verified !== 'All') {
+            $v = strtolower(trim($verified));
+            if (in_array($v, ['verified', '1', 'true', 'yes'], true)) {
+                $query->where('is_verified', true);
+            } elseif (in_array($v, ['pending', '0', 'false', 'no'], true)) {
+                $query->where('is_verified', false);
+            }
         }
 
         $employeeId = (int) $employeeIdRaw;
@@ -118,7 +129,7 @@ class PartyController extends Controller
 
             $cases = [];
             foreach ($fields as [$col, $kind]) {
-                $colSql = '`' . $col . '`';
+                $colSql = '`'.$col.'`';
                 if ($kind === 'int') {
                     $cases[] = "CASE WHEN {$colSql} IS NULL THEN 1 ELSE 0 END";
                 } else {
@@ -199,7 +210,7 @@ class PartyController extends Controller
         ]);
 
         do {
-            $displayId = 'PRT-' . strtoupper(Str::random(6));
+            $displayId = 'PRT-'.strtoupper(Str::random(6));
         } while (Party::query()->where('display_id', $displayId)->exists());
         $createdBy = optional($request->user())->email ?? 'system@local';
 
@@ -300,7 +311,7 @@ class PartyController extends Controller
         $picPath = $party->pic;
         if ($request->hasFile('pic')) {
             if ($picPath) {
-                \Illuminate\Support\Facades\Storage::disk('public')->delete($picPath);
+                Storage::disk('public')->delete($picPath);
             }
             $picPath = $request->file('pic')->store('party_docs', 'public');
         }

@@ -20,7 +20,7 @@ class PartiesTest extends TestCase
 
         $salesmanRole = Role::firstOrCreate(['name' => 'Salesman']);
         $employee = Employee::create([
-            'display_id' => 'EMP-' . strtoupper(Str::random(6)),
+            'display_id' => 'EMP-'.strtoupper(Str::random(6)),
             'company_scope_id' => 1,
             'name' => 'John Sales',
             'role_id' => $salesmanRole->id,
@@ -49,7 +49,7 @@ class PartiesTest extends TestCase
         $managerRole = Role::create(['name' => 'Manager']);
 
         $manager = Employee::create([
-            'display_id' => 'EMP-' . strtoupper(Str::random(6)),
+            'display_id' => 'EMP-'.strtoupper(Str::random(6)),
             'company_scope_id' => 1,
             'name' => 'Mary Manager',
             'role_id' => $managerRole->id,
@@ -75,7 +75,7 @@ class PartiesTest extends TestCase
 
         $salesmanRole = Role::firstOrCreate(['name' => 'Salesman']);
         $sales1 = Employee::create([
-            'display_id' => 'EMP-' . strtoupper(Str::random(6)),
+            'display_id' => 'EMP-'.strtoupper(Str::random(6)),
             'company_scope_id' => 1,
             'name' => 'Sales One',
             'role_id' => $salesmanRole->id,
@@ -85,7 +85,7 @@ class PartiesTest extends TestCase
         $sales1->roles()->sync([$salesmanRole->id]);
 
         $sales2 = Employee::create([
-            'display_id' => 'EMP-' . strtoupper(Str::random(6)),
+            'display_id' => 'EMP-'.strtoupper(Str::random(6)),
             'company_scope_id' => 1,
             'name' => 'Sales Two',
             'role_id' => $salesmanRole->id,
@@ -95,7 +95,7 @@ class PartiesTest extends TestCase
         $sales2->roles()->sync([$salesmanRole->id]);
 
         $party = Party::create([
-            'display_id' => 'PRT-' . strtoupper(Str::random(6)),
+            'display_id' => 'PRT-'.strtoupper(Str::random(6)),
             'company_code' => null,
             'company_scope_id' => 1,
             'name' => 'Update Me',
@@ -115,5 +115,50 @@ class PartiesTest extends TestCase
             'id' => $party->id,
             'employee_id' => $sales2->id,
         ]);
+    }
+
+    public function test_parties_can_be_filtered_by_verification_status(): void
+    {
+        $user = User::factory()->create();
+
+        $salesmanRole = Role::firstOrCreate(['name' => 'Salesman']);
+        $employee = Employee::create([
+            'display_id' => 'EMP-'.strtoupper(Str::random(6)),
+            'company_scope_id' => 1,
+            'name' => 'Filter Sales',
+            'role_id' => $salesmanRole->id,
+            'created_by_email' => $user->email,
+            'status' => 'Active',
+        ]);
+        $employee->roles()->sync([$salesmanRole->id]);
+
+        $verifiedParty = Party::create([
+            'display_id' => 'PRT-'.strtoupper(Str::random(6)),
+            'company_scope_id' => 1,
+            'name' => 'Verified Party',
+            'employee_id' => $employee->id,
+            'created_by_email' => $user->email,
+            'status' => 'Active',
+            'is_verified' => true,
+        ]);
+        $pendingParty = Party::create([
+            'display_id' => 'PRT-'.strtoupper(Str::random(6)),
+            'company_scope_id' => 1,
+            'name' => 'Pending Party',
+            'employee_id' => $employee->id,
+            'created_by_email' => $user->email,
+            'status' => 'Active',
+            'is_verified' => false,
+        ]);
+
+        $resVerified = $this->actingAs($user)->get('/parties?verified=Verified');
+        $resVerified->assertOk();
+        $resVerified->assertSee('row-'.$verifiedParty->id);
+        $resVerified->assertDontSee('row-'.$pendingParty->id);
+
+        $resPending = $this->actingAs($user)->get('/parties?verified=Pending');
+        $resPending->assertOk();
+        $resPending->assertSee('row-'.$pendingParty->id);
+        $resPending->assertDontSee('row-'.$verifiedParty->id);
     }
 }

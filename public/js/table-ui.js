@@ -458,6 +458,7 @@
             { key: 'district', param: 'district', inputId: 'filterDistrictInput', attr: 'data-filter-district' },
             { key: 'type', param: 'type', inputId: 'filterTypeInput', attr: 'data-filter-type' },
             { key: 'employee', param: 'employee_id', inputId: 'filterEmployeeInput', attr: 'data-filter-employee', labelAttr: 'data-filter-employee-label' },
+            { key: 'verified', param: 'verified', inputId: 'filterVerifiedInput', attr: 'data-filter-verified' },
         ];
 
         mappings.forEach((m) => {
@@ -616,6 +617,7 @@
         const type = optionItem.getAttribute('data-filter-type');
         const employee = optionItem.getAttribute('data-filter-employee');
         const employeeLabel = optionItem.getAttribute('data-filter-employee-label');
+        const verified = optionItem.getAttribute('data-filter-verified');
 
         const hasAnyFilter =
             name !== null ||
@@ -625,7 +627,8 @@
             month !== null ||
             district !== null ||
             type !== null ||
-            employee !== null;
+            employee !== null ||
+            verified !== null;
         if (!hasAnyFilter) return;
 
         const optionText = (optionItem.textContent || '').replace(/\s+/g, ' ').trim();
@@ -669,6 +672,11 @@
             const input = document.getElementById('filterEmployeeInput');
             if (input) input.value = employee;
             updateChipLabelAndState('employee', employeeLabel ?? (optionText || employee), employee);
+        }
+        if (verified !== null && verified !== undefined) {
+            const input = document.getElementById('filterVerifiedInput');
+            if (input) input.value = verified;
+            updateChipLabelAndState('verified', optionText || verified, verified);
         }
 
         markSelectedOption(optionItem);
