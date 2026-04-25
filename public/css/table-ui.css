@@ -421,3 +421,33 @@ th.alpha-sortable.sort-desc::after {
 .google-search-input:placeholder-shown + .google-search-clear {
     display: none;
 }
+
+.field-invalid {
+    border-color: #ef4444 !important;
+    box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.9) inset, 0 0 0 3px rgba(239, 68, 68, 0.12) !important;
+}
+
+.field-shake {
+    animation: cidas-shake 0.26s ease-in-out;
+}
+
+@keyframes cidas-shake {
+    0% {
+        transform: translateX(0);
+    }
+    20% {
+        transform: translateX(-2px);
+    }
+    40% {
+        transform: translateX(2px);
+    }
+    60% {
+        transform: translateX(-2px);
+    }
+    80% {
+        transform: translateX(2px);
+    }
+    100% {
+        transform: translateX(0);
+    }
+}
