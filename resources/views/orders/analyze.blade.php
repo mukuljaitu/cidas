@@ -4,9 +4,36 @@
 
 @section('content')
 <div class="flex flex-col gap-6">
-    <div class="flex flex-col gap-1">
-        <h1 class="text-3xl font-bold text-gray-900 tracking-tight">Order Analyzer</h1>
-        <div class="text-sm font-semibold text-gray-400">Range: {{ $range['start'] }} to {{ $range['end'] }} ({{ $range['days'] }} days)</div>
+    <div class="flex flex-col gap-3">
+        <div class="flex flex-col gap-1">
+            <h1 class="text-3xl font-bold text-gray-900 tracking-tight">Order Analyzer</h1>
+            <div class="text-sm font-semibold text-gray-400">Range: {{ $range['start'] }} to {{ $range['end'] }} ({{ $range['days'] }} days)</div>
+        </div>
+
+        @php
+        $quickDays = $rangeUi['quickDays'] ?? [7, 30, 90, 180, 365];
+        $mode = $rangeUi['mode'] ?? 'days';
+        $selectedDays = (int) ($rangeUi['days'] ?? 90);
+        @endphp
+
+        <div class="flex flex-wrap items-center gap-2">
+            @foreach($quickDays as $d)
+            @php $active = ($mode === 'days' && $selectedDays === (int) $d); @endphp
+            <a href="{{ route('orders.analyze', ['days' => $d]) }}"
+                class="inline-flex items-center h-9 px-3 rounded-lg text-sm font-semibold transition-colors {{ $active ? 'bg-blue-50 text-blue-700 border border-blue-100' : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50' }}">
+                {{ $d }}D
+            </a>
+            @endforeach
+
+            <form method="GET" action="{{ route('orders.analyze') }}" class="flex flex-wrap items-center gap-2">
+                <div class="text-xs font-extrabold text-gray-400 uppercase tracking-[0.2em] ml-1">Custom</div>
+                <input type="date" name="start" value="{{ request('start', $range['start']) }}" class="h-9 px-3 rounded-lg border border-gray-200 bg-white text-sm font-semibold text-gray-700" />
+                <input type="date" name="end" value="{{ request('end', $range['end']) }}" class="h-9 px-3 rounded-lg border border-gray-200 bg-white text-sm font-semibold text-gray-700" />
+                <button type="submit" class="inline-flex items-center h-9 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition-colors">
+                    Apply
+                </button>
+            </form>
+        </div>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -110,4 +137,3 @@
     })();
 </script>
 @endpush
-

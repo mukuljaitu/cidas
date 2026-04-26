@@ -36,15 +36,15 @@ class OrderController extends Controller
         $letter = $order->type === 'Pes' ? 'P' : 'F';
         $fy = $this->billFiscalYearLabel($billDate);
 
-        $patternPrefix = 'CCC/'.$letter.'/';
-        $patternSuffix = '/'.$fy;
+        $patternPrefix = 'CCC/' . $letter . '/';
+        $patternSuffix = '/' . $fy;
 
         $existing = Order::query()
             ->where('is_deleted', false)
             ->where('bill_type', 'A')
             ->where('type', $order->type)
             ->whereNotNull('bill_no')
-            ->where('bill_no', 'like', $patternPrefix.'%'.$patternSuffix)
+            ->where('bill_no', 'like', $patternPrefix . '%' . $patternSuffix)
             ->lockForUpdate()
             ->pluck('bill_no');
 
@@ -64,7 +64,7 @@ class OrderController extends Controller
 
         $next = $maxSeq + 1;
 
-        return 'CCC/'.$letter.'/'.$next.'/'.$fy;
+        return 'CCC/' . $letter . '/' . $next . '/' . $fy;
     }
 
     public function index(Request $request)
@@ -72,11 +72,53 @@ class OrderController extends Controller
         return view('orders.index');
     }
 
-    public function analyze()
+    public function analyze(Request $request)
     {
-        $days = 90;
+        $maxDays = 365;
+        $defaultDays = 90;
+
+        $requestedDays = (int) $request->query('days', $defaultDays);
+        if ($requestedDays <= 0) {
+            $requestedDays = $defaultDays;
+        }
+        if ($requestedDays > $maxDays) {
+            $requestedDays = $maxDays;
+        }
+
+        $startParam = trim((string) $request->query('start', ''));
+        $endParam = trim((string) $request->query('end', ''));
+
+        $usingCustom = false;
         $end = Carbon::today();
-        $start = Carbon::today()->subDays($days - 1);
+        $start = Carbon::today()->subDays($requestedDays - 1);
+
+        if ($startParam !== '' && $endParam !== '') {
+            try {
+                $customStart = Carbon::parse($startParam)->startOfDay();
+                $customEnd = Carbon::parse($endParam)->startOfDay();
+
+                if ($customEnd->gt(Carbon::today())) {
+                    $customEnd = Carbon::today();
+                }
+
+                if ($customStart->lte($customEnd)) {
+                    $usingCustom = true;
+                    $end = $customEnd;
+                    $days = $customStart->diffInDays($customEnd) + 1;
+                    if ($days > $maxDays) {
+                        $days = $maxDays;
+                        $start = $end->copy()->subDays($days - 1);
+                    } else {
+                        $start = $customStart;
+                    }
+                }
+            } catch (\Throwable $e) {
+            }
+        }
+
+        if (! $usingCustom) {
+            $days = $requestedDays;
+        }
 
         $labels = [];
         $cursor = $start->copy();
@@ -95,22 +137,22 @@ class OrderController extends Controller
             ->orderByDesc('qty')
             ->limit(6)
             ->pluck('order_items.product')
-            ->map(fn ($p) => trim((string) $p))
-            ->filter(fn ($p) => $p !== '')
+            ->map(fn($p) => trim((string) $p))
+            ->filter(fn($p) => $p !== '')
             ->values();
 
         $productRows = $topProducts->isEmpty()
             ? collect()
             : DB::table('order_items')
-                ->join('orders', 'orders.id', '=', 'order_items.order_id')
-                ->where('orders.is_deleted', false)
-                ->where('order_items.is_deleted', false)
-                ->whereBetween('orders.order_date', [$start->toDateString(), $end->toDateString()])
-                ->whereIn('order_items.product', $topProducts->all())
-                ->select('orders.order_date as day', 'order_items.product', DB::raw('SUM(order_items.quantity) as qty'))
-                ->groupBy('orders.order_date', 'order_items.product')
-                ->orderBy('orders.order_date')
-                ->get();
+            ->join('orders', 'orders.id', '=', 'order_items.order_id')
+            ->where('orders.is_deleted', false)
+            ->where('order_items.is_deleted', false)
+            ->whereBetween('orders.order_date', [$start->toDateString(), $end->toDateString()])
+            ->whereIn('order_items.product', $topProducts->all())
+            ->select('orders.order_date as day', 'order_items.product', DB::raw('SUM(order_items.quantity) as qty'))
+            ->groupBy('orders.order_date', 'order_items.product')
+            ->orderBy('orders.order_date')
+            ->get();
 
         $productByKey = [];
         foreach ($productRows as $r) {
@@ -145,25 +187,25 @@ class OrderController extends Controller
             ->orderByDesc('qty')
             ->limit(6)
             ->pluck('city')
-            ->map(fn ($c) => trim((string) $c))
-            ->filter(fn ($c) => $c !== '')
+            ->map(fn($c) => trim((string) $c))
+            ->filter(fn($c) => $c !== '')
             ->values();
 
         $cityRows = $topCities->isEmpty()
             ? collect()
             : DB::table('order_items')
-                ->join('orders', 'orders.id', '=', 'order_items.order_id')
-                ->join('parties', 'parties.id', '=', 'orders.party_id')
-                ->where('orders.is_deleted', false)
-                ->where('order_items.is_deleted', false)
-                ->whereBetween('orders.order_date', [$start->toDateString(), $end->toDateString()])
-                ->whereNotNull('parties.city')
-                ->whereRaw("TRIM(parties.city) <> ''")
-                ->whereIn(DB::raw('TRIM(parties.city)'), $topCities->all())
-                ->select('orders.order_date as day', DB::raw('TRIM(parties.city) as city'), DB::raw('SUM(order_items.quantity) as qty'))
-                ->groupBy('orders.order_date', DB::raw('TRIM(parties.city)'))
-                ->orderBy('orders.order_date')
-                ->get();
+            ->join('orders', 'orders.id', '=', 'order_items.order_id')
+            ->join('parties', 'parties.id', '=', 'orders.party_id')
+            ->where('orders.is_deleted', false)
+            ->where('order_items.is_deleted', false)
+            ->whereBetween('orders.order_date', [$start->toDateString(), $end->toDateString()])
+            ->whereNotNull('parties.city')
+            ->whereRaw("TRIM(parties.city) <> ''")
+            ->whereIn(DB::raw('TRIM(parties.city)'), $topCities->all())
+            ->select('orders.order_date as day', DB::raw('TRIM(parties.city) as city'), DB::raw('SUM(order_items.quantity) as qty'))
+            ->groupBy('orders.order_date', DB::raw('TRIM(parties.city)'))
+            ->orderBy('orders.order_date')
+            ->get();
 
         $cityByKey = [];
         foreach ($cityRows as $r) {
@@ -193,6 +235,11 @@ class OrderController extends Controller
                 'start' => $start->toDateString(),
                 'end' => $end->toDateString(),
                 'days' => $days,
+            ],
+            'rangeUi' => [
+                'mode' => $usingCustom ? 'custom' : 'days',
+                'days' => $days,
+                'quickDays' => [7, 30, 90, 180, 365],
             ],
             'productChart' => [
                 'labels' => $labels,
