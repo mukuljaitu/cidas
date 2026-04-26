@@ -78,6 +78,43 @@
             '#E11D48'
         ];
 
+        const zebraBackground = {
+            id: 'zebraBackground',
+            beforeDraw(chart, args, pluginOptions) {
+                const enabled = pluginOptions && pluginOptions.enabled !== undefined ? pluginOptions.enabled : true;
+                if (!enabled) return;
+
+                const x = chart?.scales?.x;
+                const area = chart?.chartArea;
+                if (!x || !area) return;
+
+                const tickCount = Array.isArray(x.ticks) ? x.ticks.length : 0;
+                if (tickCount <= 0) return;
+
+                const evenColor = pluginOptions?.evenColor ?? 'rgba(17, 24, 39, 0.04)';
+                const oddColor = pluginOptions?.oddColor ?? 'rgba(255, 255, 255, 0)';
+
+                const ctx = chart.ctx;
+                ctx.save();
+
+                for (let i = 0; i < tickCount; i++) {
+                    const center = x.getPixelForTick(i);
+                    const prevCenter = i > 0 ? x.getPixelForTick(i - 1) : center;
+                    const nextCenter = i < tickCount - 1 ? x.getPixelForTick(i + 1) : center;
+
+                    const left = i === 0 ? area.left : (prevCenter + center) / 2;
+                    const right = i === tickCount - 1 ? area.right : (center + nextCenter) / 2;
+
+                    ctx.fillStyle = i % 2 === 0 ? evenColor : oddColor;
+                    ctx.fillRect(left, area.top, right - left, area.bottom - area.top);
+                }
+
+                ctx.restore();
+            }
+        };
+
+        Chart.register(zebraBackground);
+
         function buildBarDatasets(raw, opts) {
             const list = Array.isArray(raw) ? raw : [];
             return list.map((ds, i) => {
@@ -120,6 +157,11 @@
                         intersect: false
                     },
                     plugins: {
+                        zebraBackground: {
+                            enabled: true,
+                            evenColor: 'rgba(17, 24, 39, 0.04)',
+                            oddColor: 'rgba(255, 255, 255, 0)'
+                        },
                         legend: {
                             position: 'bottom',
                             labels: {
