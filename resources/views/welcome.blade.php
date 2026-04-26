@@ -142,6 +142,16 @@
                         </div>
                     </a>
 
+                    <a href="{{ route('orders.analyze') }}" class="group relative flex flex-col items-center justify-center p-6 bg-white dark:bg-[#1C1C1E] rounded-[28px] shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] dark:shadow-none border border-gray-100 dark:border-white/5 hover:shadow-lg dark:hover:bg-[#2C2C2E] transition-all duration-300 ease-out transform hover:-translate-y-1 active:scale-95 overflow-hidden">
+                        <div class="w-16 h-16 rounded-[20px] flex items-center justify-center mb-4 bg-emerald-500 text-white shadow-inner group-hover:scale-110 transition-transform duration-300 ease-out">
+                            <i data-lucide="line-chart" class="w-[30px] h-[30px]"></i>
+                        </div>
+                        <span class="text-sm font-semibold text-gray-800 dark:text-gray-200 text-center leading-tight">Orders</span>
+                        <div class="absolute bottom-3 opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300">
+                            <i data-lucide="chevron-right" class="w-4 h-4 text-gray-400"></i>
+                        </div>
+                    </a>
+
                 </div>
             </div>
 

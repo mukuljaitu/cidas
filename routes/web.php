@@ -61,6 +61,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('/view-tours/{tour}', [TourController::class, 'update'])->name('tours.update');
     Route::delete('/view-tours/{tour}', [TourController::class, 'destroy'])->name('tours.destroy');
 
+    Route::get('/view-orders', [OrderController::class, 'analyze'])->name('orders.analyze');
+
     Route::get('/banks', [BankController::class, 'index'])->name('banks.index');
     Route::post('/banks', [BankController::class, 'store'])->name('banks.store');
     Route::put('/banks/{bank}', [BankController::class, 'update'])->name('banks.update');

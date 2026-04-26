@@ -72,6 +72,139 @@ class OrderController extends Controller
         return view('orders.index');
     }
 
+    public function analyze()
+    {
+        $days = 90;
+        $end = Carbon::today();
+        $start = Carbon::today()->subDays($days - 1);
+
+        $labels = [];
+        $cursor = $start->copy();
+        while ($cursor->lte($end)) {
+            $labels[] = $cursor->toDateString();
+            $cursor->addDay();
+        }
+
+        $topProducts = DB::table('order_items')
+            ->join('orders', 'orders.id', '=', 'order_items.order_id')
+            ->where('orders.is_deleted', false)
+            ->where('order_items.is_deleted', false)
+            ->whereBetween('orders.order_date', [$start->toDateString(), $end->toDateString()])
+            ->select('order_items.product', DB::raw('SUM(order_items.quantity) as qty'))
+            ->groupBy('order_items.product')
+            ->orderByDesc('qty')
+            ->limit(6)
+            ->pluck('order_items.product')
+            ->map(fn ($p) => trim((string) $p))
+            ->filter(fn ($p) => $p !== '')
+            ->values();
+
+        $productRows = $topProducts->isEmpty()
+            ? collect()
+            : DB::table('order_items')
+                ->join('orders', 'orders.id', '=', 'order_items.order_id')
+                ->where('orders.is_deleted', false)
+                ->where('order_items.is_deleted', false)
+                ->whereBetween('orders.order_date', [$start->toDateString(), $end->toDateString()])
+                ->whereIn('order_items.product', $topProducts->all())
+                ->select('orders.order_date as day', 'order_items.product', DB::raw('SUM(order_items.quantity) as qty'))
+                ->groupBy('orders.order_date', 'order_items.product')
+                ->orderBy('orders.order_date')
+                ->get();
+
+        $productByKey = [];
+        foreach ($productRows as $r) {
+            $day = (string) $r->day;
+            $product = trim((string) $r->product);
+            $qty = (int) ($r->qty ?? 0);
+            $productByKey[$product][$day] = $qty;
+        }
+
+        $productDatasets = [];
+        foreach ($topProducts as $product) {
+            $points = [];
+            foreach ($labels as $day) {
+                $points[] = (int) ($productByKey[$product][$day] ?? 0);
+            }
+            $productDatasets[] = [
+                'label' => $product,
+                'data' => $points,
+            ];
+        }
+
+        $topCities = DB::table('order_items')
+            ->join('orders', 'orders.id', '=', 'order_items.order_id')
+            ->join('parties', 'parties.id', '=', 'orders.party_id')
+            ->where('orders.is_deleted', false)
+            ->where('order_items.is_deleted', false)
+            ->whereBetween('orders.order_date', [$start->toDateString(), $end->toDateString()])
+            ->whereNotNull('parties.city')
+            ->whereRaw("TRIM(parties.city) <> ''")
+            ->select(DB::raw('TRIM(parties.city) as city'), DB::raw('SUM(order_items.quantity) as qty'))
+            ->groupBy(DB::raw('TRIM(parties.city)'))
+            ->orderByDesc('qty')
+            ->limit(6)
+            ->pluck('city')
+            ->map(fn ($c) => trim((string) $c))
+            ->filter(fn ($c) => $c !== '')
+            ->values();
+
+        $cityRows = $topCities->isEmpty()
+            ? collect()
+            : DB::table('order_items')
+                ->join('orders', 'orders.id', '=', 'order_items.order_id')
+                ->join('parties', 'parties.id', '=', 'orders.party_id')
+                ->where('orders.is_deleted', false)
+                ->where('order_items.is_deleted', false)
+                ->whereBetween('orders.order_date', [$start->toDateString(), $end->toDateString()])
+                ->whereNotNull('parties.city')
+                ->whereRaw("TRIM(parties.city) <> ''")
+                ->whereIn(DB::raw('TRIM(parties.city)'), $topCities->all())
+                ->select('orders.order_date as day', DB::raw('TRIM(parties.city) as city'), DB::raw('SUM(order_items.quantity) as qty'))
+                ->groupBy('orders.order_date', DB::raw('TRIM(parties.city)'))
+                ->orderBy('orders.order_date')
+                ->get();
+
+        $cityByKey = [];
+        foreach ($cityRows as $r) {
+            $day = (string) $r->day;
+            $city = trim((string) $r->city);
+            $qty = (int) ($r->qty ?? 0);
+            if ($city === '') {
+                continue;
+            }
+            $cityByKey[$city][$day] = $qty;
+        }
+
+        $cityDatasets = [];
+        foreach ($topCities as $city) {
+            $points = [];
+            foreach ($labels as $day) {
+                $points[] = (int) ($cityByKey[$city][$day] ?? 0);
+            }
+            $cityDatasets[] = [
+                'label' => $city,
+                'data' => $points,
+            ];
+        }
+
+        return view('orders.analyze', [
+            'range' => [
+                'start' => $start->toDateString(),
+                'end' => $end->toDateString(),
+                'days' => $days,
+            ],
+            'productChart' => [
+                'labels' => $labels,
+                'datasets' => $productDatasets,
+            ],
+            'cityChart' => [
+                'labels' => $labels,
+                'datasets' => $cityDatasets,
+            ],
+        ]);
+    }
+
     public function apiList(Request $request)
     {
         $orders = Order::query()
