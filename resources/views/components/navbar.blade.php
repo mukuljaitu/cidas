@@ -6,6 +6,7 @@ $createItems = [
 
 $analyseItems = [
 ['label' => 'View Tours', 'url' => route('tours.index'), 'active' => request()->is('view-tours*')],
+['label' => 'Employee Analyzer', 'url' => route('employees.analyze'), 'active' => request()->is('view-employees*')],
 ['label' => 'Order Analyzer', 'url' => route('orders.analyze'), 'active' => request()->is('view-orders*')],
 ];
 

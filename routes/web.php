@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AdminNotificationController;
 use App\Http\Controllers\BankController;
 use App\Http\Controllers\CityController;
 use App\Http\Controllers\EmployeeController;
@@ -10,7 +11,6 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\TourController;
 use App\Http\Controllers\TransportController;
 use App\Http\Controllers\VariantController;
-use App\Http\Controllers\AdminNotificationController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -60,6 +60,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/view-tours', [TourController::class, 'index'])->name('tours.index');
     Route::put('/view-tours/{tour}', [TourController::class, 'update'])->name('tours.update');
     Route::delete('/view-tours/{tour}', [TourController::class, 'destroy'])->name('tours.destroy');
+
+    Route::get('/view-employees', [EmployeeController::class, 'analyze'])->name('employees.analyze');
 
     Route::get('/view-orders', [OrderController::class, 'analyze'])->name('orders.analyze');
 

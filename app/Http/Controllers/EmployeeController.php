@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Employee;
 use App\Models\Role;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class EmployeeController extends Controller
@@ -51,6 +53,154 @@ class EmployeeController extends Controller
         $roleFilters = Role::query()->whereNotNull('name')->orderBy('name')->pluck('name')->prepend('All');
 
         return view('employees.index', compact('employees', 'names', 'statuses', 'roleOptions', 'roleFilters'));
+    }
+
+    public function analyze(Request $request)
+    {
+        $maxDays = 365;
+        $defaultDays = 90;
+
+        $requestedDays = (int) $request->query('days', $defaultDays);
+        if ($requestedDays <= 0) {
+            $requestedDays = $defaultDays;
+        }
+        if ($requestedDays > $maxDays) {
+            $requestedDays = $maxDays;
+        }
+
+        $startParam = trim((string) $request->query('start', ''));
+        $endParam = trim((string) $request->query('end', ''));
+
+        $usingCustom = false;
+        $end = Carbon::today();
+        $start = Carbon::today()->subDays($requestedDays - 1);
+
+        if ($startParam !== '' && $endParam !== '') {
+            try {
+                $customStart = Carbon::parse($startParam)->startOfDay();
+                $customEnd = Carbon::parse($endParam)->startOfDay();
+
+                if ($customEnd->gt(Carbon::today())) {
+                    $customEnd = Carbon::today();
+                }
+
+                if ($customStart->lte($customEnd)) {
+                    $usingCustom = true;
+                    $end = $customEnd;
+                    $days = $customStart->diffInDays($customEnd) + 1;
+                    if ($days > $maxDays) {
+                        $days = $maxDays;
+                        $start = $end->copy()->subDays($days - 1);
+                    } else {
+                        $start = $customStart;
+                    }
+                }
+            } catch (\Throwable $e) {
+            }
+        }
+
+        if (! $usingCustom) {
+            $days = $requestedDays;
+        }
+
+        $tourRows = DB::table('tours')
+            ->whereBetween('tour_date', [$start->toDateString(), $end->toDateString()])
+            ->select(
+                DB::raw('TRIM(employee_name) as employee'),
+                DB::raw("COALESCE(NULLIF(TRIM(status), ''), 'Unknown') as status"),
+                DB::raw('COUNT(*) as qty')
+            )
+            ->groupBy(DB::raw('TRIM(employee_name)'), DB::raw("COALESCE(NULLIF(TRIM(status), ''), 'Unknown')"))
+            ->get();
+
+        $employeeTotals = [];
+        $employeeStatusCounts = [];
+        foreach ($tourRows as $r) {
+            $employee = trim((string) $r->employee);
+            $status = trim((string) $r->status);
+            $qty = (int) ($r->qty ?? 0);
+
+            if ($employee === '') {
+                continue;
+            }
+
+            $employeeTotals[$employee] = ($employeeTotals[$employee] ?? 0) + $qty;
+            $employeeStatusCounts[$employee][$status] = ($employeeStatusCounts[$employee][$status] ?? 0) + $qty;
+        }
+
+        arsort($employeeTotals);
+        $topEmployees = collect(array_keys($employeeTotals))
+            ->take(12)
+            ->values()
+            ->all();
+
+        $normalizedCounts = [];
+        foreach ($employeeStatusCounts as $employee => $rows) {
+            foreach ($rows as $status => $qty) {
+                $k = mb_strtolower(trim((string) $status));
+                $k = preg_replace('/\s+/', ' ', $k);
+                $normalizedCounts[$employee][$k] = ($normalizedCounts[$employee][$k] ?? 0) + (int) $qty;
+            }
+        }
+
+        $g1 = [
+            'Leave' => ['leave'],
+            'Holiday' => ['holiday'],
+            'No Station' => ['no station', 'nostation', 'no-station'],
+        ];
+
+        $g2 = [
+            'Field Visit' => ['field visit', 'fieldvisit', 'field-visit'],
+            'Office Visit' => ['office visit', 'officevisit', 'office-visit'],
+            'Tour' => ['1'],
+        ];
+
+        $g1Datasets = [];
+        foreach ($g1 as $label => $keys) {
+            $points = [];
+            foreach ($topEmployees as $employee) {
+                $sum = 0;
+                foreach ($keys as $k) {
+                    $sum += (int) ($normalizedCounts[$employee][$k] ?? 0);
+                }
+                $points[] = $sum;
+            }
+            $g1Datasets[] = ['label' => $label, 'data' => $points];
+        }
+
+        $g2Datasets = [];
+        foreach ($g2 as $label => $keys) {
+            $points = [];
+            foreach ($topEmployees as $employee) {
+                $sum = 0;
+                foreach ($keys as $k) {
+                    $sum += (int) ($normalizedCounts[$employee][$k] ?? 0);
+                }
+                $points[] = $sum;
+            }
+            $g2Datasets[] = ['label' => $label, 'data' => $points];
+        }
+
+        return view('employees.analyze', [
+            'range' => [
+                'start' => $start->toDateString(),
+                'end' => $end->toDateString(),
+                'days' => $days,
+            ],
+            'rangeUi' => [
+                'mode' => $usingCustom ? 'custom' : 'days',
+                'days' => $days,
+                'quickDays' => [7, 30, 90, 180, 365],
+            ],
+            'attendanceChart' => [
+                'labels' => $topEmployees,
+                'datasets' => $g1Datasets,
+            ],
+            'toursCountChart' => [
+                'labels' => $topEmployees,
+                'datasets' => $g2Datasets,
+            ],
+        ]);
     }
 
     public function store(Request $request)
