@@ -414,7 +414,7 @@
                 <div class="pt-4 border-t border-gray-100">
                     <div class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Receiving Proofs</div>
                     <div id="imageGrid" class="grid grid-cols-3 gap-2 mb-3"></div>
-                    <input type="file" name="receiving_images[]" multiple class="block w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                    <input id="field_receiving_files" type="file" name="receiving_images[]" multiple class="block w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
                     <input type="hidden" name="existing_images" id="field_existing_images" value="[]">
                 </div>
             </div>
@@ -437,6 +437,7 @@
         endpoints: {
             list: @json(route('orders.api.list')),
             detailsBase: @json(url('/orders/api/details')),
+            receivingFile: @json(route('orders.receiving-file')),
             itemsBulk: @json(route('orders.api.items.bulk')),
             salesmen: @json(route('orders.api.salesmen')),
             parties: @json(route('orders.api.parties')),
@@ -841,6 +842,11 @@
         const drawer = document.getElementById('editDrawer');
         drawer.classList.add('open');
         document.getElementById('drawerOrderId').innerText = `#${String(orderId).padStart(5, '0')}`;
+        document.getElementById('field_existing_images').value = '[]';
+        const grid = document.getElementById('imageGrid');
+        if (grid) grid.innerHTML = '';
+        const fileInput = document.getElementById('field_receiving_files');
+        if (fileInput) fileInput.value = '';
 
         const res = await fetch(`${ORDER_BOOK.endpoints.detailsBase}/${orderId}`, {
             headers: {
@@ -871,6 +877,8 @@
     function closeDrawer() {
         document.getElementById('drawerOverlay').classList.add('hidden');
         document.getElementById('editDrawer').classList.remove('open');
+        const fileInput = document.getElementById('field_receiving_files');
+        if (fileInput) fileInput.value = '';
         currentDrawerOrderId = null;
     }
 
@@ -890,6 +898,10 @@
     function fileUrl(path) {
         const p = (path || '').toString();
         if (!p) return '';
+        const normalized = p.startsWith('/') ? p.slice(1) : p;
+        if (normalized.includes('uploads/receiving/')) {
+            return `${ORDER_BOOK.endpoints.receivingFile}?path=${encodeURIComponent(normalized)}`;
+        }
         return p.startsWith('/') ? p : `/${p}`;
     }
 
@@ -1107,140 +1119,140 @@
         await fetchOrders();
     }
 
-                                async function loadSalesmenForCreate() {
-                                    const res = await fetch(ORDER_BOOK.endpoints.salesmen, {
-                                        headers: {
-                                            'Accept': 'application/json'
-                                        }
-                                    });
-                                    const salesmen = await res.json();
-                                    const select = document.getElementById('newSalesman');
-                                    select.innerHTML = '<option value="">Select Salesman...</option>';
-                                    (Array.isArray(salesmen) ? salesmen : []).forEach(s => {
-                                        const opt = document.createElement('option');
-                                        opt.value = s.id;
-                                        opt.innerText = s.name;
-                                        select.appendChild(opt);
-                                    });
-                                }
+    async function loadSalesmenForCreate() {
+        const res = await fetch(ORDER_BOOK.endpoints.salesmen, {
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
+        const salesmen = await res.json();
+        const select = document.getElementById('newSalesman');
+        select.innerHTML = '<option value="">Select Salesman...</option>';
+        (Array.isArray(salesmen) ? salesmen : []).forEach(s => {
+            const opt = document.createElement('option');
+            opt.value = s.id;
+            opt.innerText = s.name;
+            select.appendChild(opt);
+        });
+    }
 
-                                async function onNewSalesmanChange(salesmanId) {
-                                    const partySelect = document.getElementById('newParty');
-                                    partySelect.innerHTML = '<option value="">Select Party...</option>';
-                                    if (!salesmanId) return;
-                                    const res = await fetch(`${ORDER_BOOK.endpoints.parties}?salesman_id=${encodeURIComponent(salesmanId)}`, {
-                                        headers: {
-                                            'Accept': 'application/json'
-                                        }
-                                    });
-                                    const parties = await res.json();
-                                    (Array.isArray(parties) ? parties : []).forEach(p => {
-                                        const opt = document.createElement('option');
-                                        opt.value = p.id;
-                                        opt.innerText = p.name;
-                                        partySelect.appendChild(opt);
-                                    });
-                                }
+    async function onNewSalesmanChange(salesmanId) {
+        const partySelect = document.getElementById('newParty');
+        partySelect.innerHTML = '<option value="">Select Party...</option>';
+        if (!salesmanId) return;
+        const res = await fetch(`${ORDER_BOOK.endpoints.parties}?salesman_id=${encodeURIComponent(salesmanId)}`, {
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
+        const parties = await res.json();
+        (Array.isArray(parties) ? parties : []).forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.id;
+            opt.innerText = p.name;
+            partySelect.appendChild(opt);
+        });
+    }
 
-                                function setNewBillType(type) {
-                                    newOrderBillType = type;
-                                    const btnA = document.getElementById('newBillTypeA');
-                                    const btnB = document.getElementById('newBillTypeB');
-                                    if (type === 'A') {
-                                        btnA.className = 'flex-1 py-2 rounded-lg text-xs font-bold transition-all bg-white shadow-sm text-blue-600';
-                                        btnB.className = 'flex-1 py-2 rounded-lg text-xs font-bold transition-all text-gray-400';
-                                    } else {
-                                        btnB.className = 'flex-1 py-2 rounded-lg text-xs font-bold transition-all bg-white shadow-sm text-purple-600';
-                                        btnA.className = 'flex-1 py-2 rounded-lg text-xs font-bold transition-all text-gray-400';
-                                    }
-                                }
+    function setNewBillType(type) {
+        newOrderBillType = type;
+        const btnA = document.getElementById('newBillTypeA');
+        const btnB = document.getElementById('newBillTypeB');
+        if (type === 'A') {
+            btnA.className = 'flex-1 py-2 rounded-lg text-xs font-bold transition-all bg-white shadow-sm text-blue-600';
+            btnB.className = 'flex-1 py-2 rounded-lg text-xs font-bold transition-all text-gray-400';
+        } else {
+            btnB.className = 'flex-1 py-2 rounded-lg text-xs font-bold transition-all bg-white shadow-sm text-purple-600';
+            btnA.className = 'flex-1 py-2 rounded-lg text-xs font-bold transition-all text-gray-400';
+        }
+    }
 
-                                async function setNewOrderType(type) {
-                                    newOrderType = type;
-                                    const btnFer = document.getElementById('btnTypeFer');
-                                    const btnPes = document.getElementById('btnTypePes');
-                                    if (type === 'Fer') {
-                                        btnFer.className = 'flex-1 py-2 rounded-lg text-xs font-bold transition-all bg-white shadow-sm text-blue-600';
-                                        btnPes.className = 'flex-1 py-2 rounded-lg text-xs font-bold transition-all text-gray-400';
-                                    } else {
-                                        btnPes.className = 'flex-1 py-2 rounded-lg text-xs font-bold transition-all bg-white shadow-sm text-blue-600';
-                                        btnFer.className = 'flex-1 py-2 rounded-lg text-xs font-bold transition-all text-gray-400';
-                                    }
-                                    await loadProductsForType(type);
-                                }
+    async function setNewOrderType(type) {
+        newOrderType = type;
+        const btnFer = document.getElementById('btnTypeFer');
+        const btnPes = document.getElementById('btnTypePes');
+        if (type === 'Fer') {
+            btnFer.className = 'flex-1 py-2 rounded-lg text-xs font-bold transition-all bg-white shadow-sm text-blue-600';
+            btnPes.className = 'flex-1 py-2 rounded-lg text-xs font-bold transition-all text-gray-400';
+        } else {
+            btnPes.className = 'flex-1 py-2 rounded-lg text-xs font-bold transition-all bg-white shadow-sm text-blue-600';
+            btnFer.className = 'flex-1 py-2 rounded-lg text-xs font-bold transition-all text-gray-400';
+        }
+        await loadProductsForType(type);
+    }
 
-                                async function loadProductsForType(type) {
-                                    const res = await fetch(`${ORDER_BOOK.endpoints.products}?type=${encodeURIComponent(type)}`, {
-                                        headers: {
-                                            'Accept': 'application/json'
-                                        }
-                                    });
-                                    const products = await res.json();
-                                    const select = document.getElementById('newProduct');
-                                    select.innerHTML = '<option value="">Select Product...</option>';
-                                    (Array.isArray(products) ? products : []).forEach(p => {
-                                        const opt = document.createElement('option');
-                                        opt.value = p.id;
-                                        opt.innerText = p.name;
-                                        select.appendChild(opt);
-                                    });
-                                    const quick = document.getElementById('quickItemProduct');
-                                    quick.innerHTML = '<option value="">Select Product...</option>';
-                                    (Array.isArray(products) ? products : []).forEach(p => {
-                                        const opt = document.createElement('option');
-                                        opt.value = p.id;
-                                        opt.innerText = p.name;
-                                        quick.appendChild(opt);
-                                    });
-                                }
+    async function loadProductsForType(type) {
+        const res = await fetch(`${ORDER_BOOK.endpoints.products}?type=${encodeURIComponent(type)}`, {
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
+        const products = await res.json();
+        const select = document.getElementById('newProduct');
+        select.innerHTML = '<option value="">Select Product...</option>';
+        (Array.isArray(products) ? products : []).forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.id;
+            opt.innerText = p.name;
+            select.appendChild(opt);
+        });
+        const quick = document.getElementById('quickItemProduct');
+        quick.innerHTML = '<option value="">Select Product...</option>';
+        (Array.isArray(products) ? products : []).forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.id;
+            opt.innerText = p.name;
+            quick.appendChild(opt);
+        });
+    }
 
-                                async function onNewProductChange() {
-                                    const productId = document.getElementById('newProduct').value;
-                                    await loadPackingsAndSizes(productId, 'newPacking', 'newSize');
-                                }
+    async function onNewProductChange() {
+        const productId = document.getElementById('newProduct').value;
+        await loadPackingsAndSizes(productId, 'newPacking', 'newSize');
+    }
 
-                                async function onQuickItemProductChange() {
-                                    const productId = document.getElementById('quickItemProduct').value;
-                                    await loadPackingsAndSizes(productId, 'quickItemPacking', 'quickItemSize');
-                                }
+    async function onQuickItemProductChange() {
+        const productId = document.getElementById('quickItemProduct').value;
+        await loadPackingsAndSizes(productId, 'quickItemPacking', 'quickItemSize');
+    }
 
-                                async function loadPackingsAndSizes(productId, packingElId, sizeElId) {
-                                    const packingEl = document.getElementById(packingElId);
-                                    const sizeEl = document.getElementById(sizeElId);
-                                    packingEl.innerHTML = '<option value="Case">Case</option>';
-                                    sizeEl.innerHTML = '<option value="">Select S</option>';
-                                    if (!productId) return;
-                                    const res = await fetch(`${ORDER_BOOK.endpoints.productPackings}?product_id=${encodeURIComponent(productId)}`, {
-                                        headers: {
-                                            'Accept': 'application/json'
-                                        }
-                                    });
-                                    const data = await res.json();
-                                    const packings = data && Array.isArray(data.packings) ? data.packings : [];
-                                    const sizes = data && Array.isArray(data.sizes) ? data.sizes : [];
-                                    packingEl.innerHTML = '<option value="Case">Case</option>';
-                                    packings.forEach(p => {
-                                        const opt = document.createElement('option');
-                                        opt.value = p;
-                                        opt.innerText = p;
-                                        packingEl.appendChild(opt);
-                                    });
-                                    sizeEl.innerHTML = '<option value="">Select S</option>';
-                                    sizes.forEach(s => {
-                                        const opt = document.createElement('option');
-                                        opt.value = s;
-                                        opt.innerText = s;
-                                        sizeEl.appendChild(opt);
-                                    });
-                                }
+    async function loadPackingsAndSizes(productId, packingElId, sizeElId) {
+        const packingEl = document.getElementById(packingElId);
+        const sizeEl = document.getElementById(sizeElId);
+        packingEl.innerHTML = '<option value="Case">Case</option>';
+        sizeEl.innerHTML = '<option value="">Select S</option>';
+        if (!productId) return;
+        const res = await fetch(`${ORDER_BOOK.endpoints.productPackings}?product_id=${encodeURIComponent(productId)}`, {
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
+        const data = await res.json();
+        const packings = data && Array.isArray(data.packings) ? data.packings : [];
+        const sizes = data && Array.isArray(data.sizes) ? data.sizes : [];
+        packingEl.innerHTML = '<option value="Case">Case</option>';
+        packings.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p;
+            opt.innerText = p;
+            packingEl.appendChild(opt);
+        });
+        sizeEl.innerHTML = '<option value="">Select S</option>';
+        sizes.forEach(s => {
+            const opt = document.createElement('option');
+            opt.value = s;
+            opt.innerText = s;
+            sizeEl.appendChild(opt);
+        });
+    }
 
-                                function renderNewOrderItems() {
-                                    const list = document.getElementById('newOrderItemsList');
-                                    list.innerHTML = '';
-                                    newOrderItems.forEach((it, idx) => {
-                                        const row = document.createElement('div');
-                                        row.className = 'flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100';
-                                        row.innerHTML = `
+    function renderNewOrderItems() {
+        const list = document.getElementById('newOrderItemsList');
+        list.innerHTML = '';
+        newOrderItems.forEach((it, idx) => {
+            const row = document.createElement('div');
+            row.className = 'flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100';
+            row.innerHTML = `
                 <div>
                     <div class="text-sm font-bold text-gray-900">${it.product_name}</div>
                     <div class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">${it.packing || 'Case'} ${it.size || ''}</div>
@@ -1250,278 +1262,278 @@
                     <button onclick="removeNewOrderItem(${idx})" class="text-red-400 hover:text-red-600"><i class="fas fa-trash"></i></button>
                 </div>
             `;
-                                        list.appendChild(row);
-                                    });
-                                }
+            list.appendChild(row);
+        });
+    }
 
-                                function removeNewOrderItem(idx) {
-                                    newOrderItems.splice(idx, 1);
-                                    renderNewOrderItems();
-                                }
+    function removeNewOrderItem(idx) {
+        newOrderItems.splice(idx, 1);
+        renderNewOrderItems();
+    }
 
-                                async function addNewOrderItemFromQuickRow() {
-                                    const productId = document.getElementById('newProduct').value;
-                                    const productName = document.getElementById('newProduct').selectedOptions[0]?.textContent || '';
-                                    const packing = document.getElementById('newPacking').value;
-                                    const size = document.getElementById('newSize').value;
-                                    const qty = parseInt(document.getElementById('newQty').value, 10) || 1;
-                                    if (!productId) return alert('Select product');
-                                    newOrderItems.push({
-                                        product_id: parseInt(productId, 10),
-                                        product_name: productName,
-                                        packing,
-                                        size,
-                                        quantity: qty
-                                    });
-                                    renderNewOrderItems();
-                                    document.getElementById('newProduct').value = '';
-                                    document.getElementById('newPacking').innerHTML = '<option value="Case">Case</option>';
-                                    document.getElementById('newSize').innerHTML = '<option value="">Select S</option>';
-                                    document.getElementById('newQty').value = 1;
-                                }
+    async function addNewOrderItemFromQuickRow() {
+        const productId = document.getElementById('newProduct').value;
+        const productName = document.getElementById('newProduct').selectedOptions[0]?.textContent || '';
+        const packing = document.getElementById('newPacking').value;
+        const size = document.getElementById('newSize').value;
+        const qty = parseInt(document.getElementById('newQty').value, 10) || 1;
+        if (!productId) return alert('Select product');
+        newOrderItems.push({
+            product_id: parseInt(productId, 10),
+            product_name: productName,
+            packing,
+            size,
+            quantity: qty
+        });
+        renderNewOrderItems();
+        document.getElementById('newProduct').value = '';
+        document.getElementById('newPacking').innerHTML = '<option value="Case">Case</option>';
+        document.getElementById('newSize').innerHTML = '<option value="">Select S</option>';
+        document.getElementById('newQty').value = 1;
+    }
 
-                                async function saveNewOrder() {
-                                    const orderDate = document.getElementById('newOrderDate').value;
-                                    const salesmanId = document.getElementById('newSalesman').value;
-                                    const partyId = document.getElementById('newParty').value;
-                                    if (!orderDate) return alert('Select order date');
-                                    if (!salesmanId) return alert('Select salesman');
-                                    if (!partyId) return alert('Select party');
-                                    if (newOrderItems.length === 0) {
-                                        const productId = document.getElementById('newProduct').value;
-                                        if (productId) {
-                                            const productName = document.getElementById('newProduct').selectedOptions[0]?.textContent || '';
-                                            const packing = document.getElementById('newPacking').value;
-                                            const size = document.getElementById('newSize').value;
-                                            const qty = parseInt(document.getElementById('newQty').value, 10) || 1;
-                                            newOrderItems.push({
-                                                product_id: parseInt(productId, 10),
-                                                product_name: productName,
-                                                packing,
-                                                size,
-                                                quantity: qty
-                                            });
-                                            renderNewOrderItems();
-                                        }
-                                    }
+    async function saveNewOrder() {
+        const orderDate = document.getElementById('newOrderDate').value;
+        const salesmanId = document.getElementById('newSalesman').value;
+        const partyId = document.getElementById('newParty').value;
+        if (!orderDate) return alert('Select order date');
+        if (!salesmanId) return alert('Select salesman');
+        if (!partyId) return alert('Select party');
+        if (newOrderItems.length === 0) {
+            const productId = document.getElementById('newProduct').value;
+            if (productId) {
+                const productName = document.getElementById('newProduct').selectedOptions[0]?.textContent || '';
+                const packing = document.getElementById('newPacking').value;
+                const size = document.getElementById('newSize').value;
+                const qty = parseInt(document.getElementById('newQty').value, 10) || 1;
+                newOrderItems.push({
+                    product_id: parseInt(productId, 10),
+                    product_name: productName,
+                    packing,
+                    size,
+                    quantity: qty
+                });
+                renderNewOrderItems();
+            }
+        }
 
-                                    if (newOrderItems.length === 0) return alert('Add at least 1 item');
+        if (newOrderItems.length === 0) return alert('Add at least 1 item');
 
-                                    const payload = {
-                                        order_date: orderDate,
-                                        type: newOrderType,
-                                        bill_type: newOrderBillType,
-                                        status: 'Incomplete',
-                                        salesman_id: parseInt(salesmanId, 10),
-                                        party_id: parseInt(partyId, 10),
-                                        items: newOrderItems.map(it => ({
-                                            product_id: it.product_id,
-                                            packing: it.packing || null,
-                                            size: it.size || null,
-                                            quantity: it.quantity
-                                        }))
-                                    };
+        const payload = {
+            order_date: orderDate,
+            type: newOrderType,
+            bill_type: newOrderBillType,
+            status: 'Incomplete',
+            salesman_id: parseInt(salesmanId, 10),
+            party_id: parseInt(partyId, 10),
+            items: newOrderItems.map(it => ({
+                product_id: it.product_id,
+                packing: it.packing || null,
+                size: it.size || null,
+                quantity: it.quantity
+            }))
+        };
 
-                                    const res = await fetch(ORDER_BOOK.endpoints.create, {
-                                        method: 'POST',
-                                        headers: {
-                                            'Content-Type': 'application/json',
-                                            'X-CSRF-TOKEN': ORDER_BOOK.csrf,
-                                            'Accept': 'application/json'
-                                        },
-                                        body: JSON.stringify(payload)
-                                    });
-                                    const data = await res.json();
-                                    if (data && data.success) {
-                                        toggleModal('orderModal');
-                                        newOrderItems = [];
-                                        renderNewOrderItems();
-                                        await fetchOrders();
-                                    } else {
-                                        alert(data && data.error ? data.error : 'Failed to save order');
-                                    }
-                                }
+        const res = await fetch(ORDER_BOOK.endpoints.create, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': ORDER_BOOK.csrf,
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data && data.success) {
+            toggleModal('orderModal');
+            newOrderItems = [];
+            renderNewOrderItems();
+            await fetchOrders();
+        } else {
+            alert(data && data.error ? data.error : 'Failed to save order');
+        }
+    }
 
-                                async function ensureQuickProductsLoaded() {
-                                    const hasOptions = document.getElementById('quickItemProduct').options.length > 1;
-                                    if (hasOptions) return;
-                                    await loadProductsForType(newOrderType);
-                                }
+    async function ensureQuickProductsLoaded() {
+        const hasOptions = document.getElementById('quickItemProduct').options.length > 1;
+        if (hasOptions) return;
+        await loadProductsForType(newOrderType);
+    }
 
-                                async function addItemToExistingOrder() {
-                                    if (!currentItemsOrderId) return;
-                                    const productId = document.getElementById('quickItemProduct').value;
-                                    const packing = document.getElementById('quickItemPacking').value;
-                                    const size = document.getElementById('quickItemSize').value;
-                                    const qty = parseInt(document.getElementById('quickItemQty').value, 10) || 1;
-                                    if (!productId) return alert('Select product');
-                                    const res = await fetch(`/orders/${currentItemsOrderId}/items`, {
-                                        method: 'POST',
-                                        headers: {
-                                            'Content-Type': 'application/json',
-                                            'X-CSRF-TOKEN': ORDER_BOOK.csrf,
-                                            'Accept': 'application/json'
-                                        },
-                                        body: JSON.stringify({
-                                            product_id: parseInt(productId, 10),
-                                            packing: packing || null,
-                                            size: size || null,
-                                            quantity: qty
-                                        })
-                                    });
-                                    const data = await res.json();
-                                    if (data && data.success) {
-                                        await openItems(currentItemsOrderId);
-                                        await fetchOrders();
-                                    } else {
-                                        alert(data && data.error ? data.error : 'Failed to add item');
-                                    }
-                                }
+    async function addItemToExistingOrder() {
+        if (!currentItemsOrderId) return;
+        const productId = document.getElementById('quickItemProduct').value;
+        const packing = document.getElementById('quickItemPacking').value;
+        const size = document.getElementById('quickItemSize').value;
+        const qty = parseInt(document.getElementById('quickItemQty').value, 10) || 1;
+        if (!productId) return alert('Select product');
+        const res = await fetch(`/orders/${currentItemsOrderId}/items`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': ORDER_BOOK.csrf,
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                product_id: parseInt(productId, 10),
+                packing: packing || null,
+                size: size || null,
+                quantity: qty
+            })
+        });
+        const data = await res.json();
+        if (data && data.success) {
+            await openItems(currentItemsOrderId);
+            await fetchOrders();
+        } else {
+            alert(data && data.error ? data.error : 'Failed to add item');
+        }
+    }
 
-                                async function loadTransports() {
-                                    const res = await fetch(ORDER_BOOK.endpoints.transports, {
-                                        headers: {
-                                            'Accept': 'application/json'
-                                        }
-                                    });
-                                    const transports = await res.json();
-                                    const select = document.getElementById('field_transport_id');
-                                    const currentVal = select.value;
-                                    select.innerHTML = '<option value="">Select Transport...</option>';
-                                    (Array.isArray(transports) ? transports : []).forEach(t => {
-                                        const opt = document.createElement('option');
-                                        opt.value = t.id;
-                                        opt.innerText = t.name;
-                                        if (String(t.id) === String(currentVal)) opt.selected = true;
-                                        select.appendChild(opt);
-                                    });
-                                }
+    async function loadTransports() {
+        const res = await fetch(ORDER_BOOK.endpoints.transports, {
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
+        const transports = await res.json();
+        const select = document.getElementById('field_transport_id');
+        const currentVal = select.value;
+        select.innerHTML = '<option value="">Select Transport...</option>';
+        (Array.isArray(transports) ? transports : []).forEach(t => {
+            const opt = document.createElement('option');
+            opt.value = t.id;
+            opt.innerText = t.name;
+            if (String(t.id) === String(currentVal)) opt.selected = true;
+            select.appendChild(opt);
+        });
+    }
 
-                                function setTransportPreview(t) {
-                                    document.getElementById('transportVehicle').innerText = t && t.vehicle ? t.vehicle : '---';
-                                    document.getElementById('transportVehicleNo').innerText = t && t.vehicle_number ? t.vehicle_number : '---';
-                                    document.getElementById('transportContact').innerText = t && t.contact ? t.contact : '---';
-                                }
+    function setTransportPreview(t) {
+        document.getElementById('transportVehicle').innerText = t && t.vehicle ? t.vehicle : '---';
+        document.getElementById('transportVehicleNo').innerText = t && t.vehicle_number ? t.vehicle_number : '---';
+        document.getElementById('transportContact').innerText = t && t.contact ? t.contact : '---';
+    }
 
-                                async function onDrawerTransportChange(transportId) {
-                                    if (!transportId) {
-                                        setTransportPreview(null);
-                                        return;
-                                    }
-                                    const res = await fetch(`${ORDER_BOOK.endpoints.transportDetailsBase}/${encodeURIComponent(transportId)}`, {
-                                        headers: {
-                                            'Accept': 'application/json'
-                                        }
-                                    });
-                                    const data = await res.json();
-                                    setTransportPreview(data);
-                                }
+    async function onDrawerTransportChange(transportId) {
+        if (!transportId) {
+            setTransportPreview(null);
+            return;
+        }
+        const res = await fetch(`${ORDER_BOOK.endpoints.transportDetailsBase}/${encodeURIComponent(transportId)}`, {
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
+        const data = await res.json();
+        setTransportPreview(data);
+    }
 
-                                function exportToCSV() {
-                                    const rows = filteredOrders.map(o => ({
-                                        OrderID: o.id,
-                                        OrderDate: formatIndianDate(o.order_date),
-                                        Salesman: o.salesman || '',
-                                        Party: o.party || '',
-                                        Type: o.type || '',
-                                        BillType: o.bill_type || '',
-                                        BillNo: o.bill_no || '',
-                                        Status: o.status || '',
-                                        Items: o.items_count || 0
-                                    }));
-                                    const header = Object.keys(rows[0] || {}).join(',');
-                                    const lines = rows.map(r => Object.values(r).map(v => `"${String(v).replaceAll('"', '""')}"`).join(','));
-                                    const csv = [header, ...lines].join('\n');
-                                    const blob = new Blob([csv], {
-                                        type: 'text/csv;charset=utf-8;'
-                                    });
-                                    const url = URL.createObjectURL(blob);
-                                    const a = document.createElement('a');
-                                    a.href = url;
-                                    a.download = 'orders.csv';
-                                    document.body.appendChild(a);
-                                    a.click();
-                                    a.remove();
-                                    URL.revokeObjectURL(url);
-                                }
+    function exportToCSV() {
+        const rows = filteredOrders.map(o => ({
+            OrderID: o.id,
+            OrderDate: formatIndianDate(o.order_date),
+            Salesman: o.salesman || '',
+            Party: o.party || '',
+            Type: o.type || '',
+            BillType: o.bill_type || '',
+            BillNo: o.bill_no || '',
+            Status: o.status || '',
+            Items: o.items_count || 0
+        }));
+        const header = Object.keys(rows[0] || {}).join(',');
+        const lines = rows.map(r => Object.values(r).map(v => `"${String(v).replaceAll('"', '""')}"`).join(','));
+        const csv = [header, ...lines].join('\n');
+        const blob = new Blob([csv], {
+            type: 'text/csv;charset=utf-8;'
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'orders.csv';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+    }
 
-                                function exportToExcel() {
-                                    const rows = filteredOrders.map(o => ({
-                                        OrderID: o.id,
-                                        OrderDate: formatIndianDate(o.order_date),
-                                        Salesman: o.salesman || '',
-                                        Party: o.party || '',
-                                        Type: o.type || '',
-                                        BillType: o.bill_type || '',
-                                        BillNo: o.bill_no || '',
-                                        Status: o.status || '',
-                                        Items: o.items_count || 0
-                                    }));
-                                    const ws = XLSX.utils.json_to_sheet(rows);
-                                    const wb = XLSX.utils.book_new();
-                                    XLSX.utils.book_append_sheet(wb, ws, 'Orders');
-                                    XLSX.writeFile(wb, 'orders.xlsx');
-                                }
+    function exportToExcel() {
+        const rows = filteredOrders.map(o => ({
+            OrderID: o.id,
+            OrderDate: formatIndianDate(o.order_date),
+            Salesman: o.salesman || '',
+            Party: o.party || '',
+            Type: o.type || '',
+            BillType: o.bill_type || '',
+            BillNo: o.bill_no || '',
+            Status: o.status || '',
+            Items: o.items_count || 0
+        }));
+        const ws = XLSX.utils.json_to_sheet(rows);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Orders');
+        XLSX.writeFile(wb, 'orders.xlsx');
+    }
 
-                                function exportToPDF() {
-                                    const {
-                                        jsPDF
-                                    } = window.jspdf;
-                                    const doc = new jsPDF({
-                                        orientation: 'landscape'
-                                    });
-                                    const head = [
-                                        ['ID', 'Date', 'Salesman', 'Party', 'Type', 'Bill', 'Status', 'Items']
-                                    ];
-                                    const body = filteredOrders.map(o => ([
-                                        String(o.id).padStart(5, '0'),
-                                        formatIndianDate(o.order_date),
-                                        o.salesman || '',
-                                        o.party || '',
-                                        o.type || '',
-                                        `${o.bill_type || ''} ${o.bill_no || ''}`.trim(),
-                                        o.status || '',
-                                        String(o.items_count || 0)
-                                    ]));
-                                    doc.autoTable({
-                                        head,
-                                        body,
-                                        styles: {
-                                            fontSize: 8
-                                        }
-                                    });
-                                    doc.save('orders.pdf');
-                                }
+    function exportToPDF() {
+        const {
+            jsPDF
+        } = window.jspdf;
+        const doc = new jsPDF({
+            orientation: 'landscape'
+        });
+        const head = [
+            ['ID', 'Date', 'Salesman', 'Party', 'Type', 'Bill', 'Status', 'Items']
+        ];
+        const body = filteredOrders.map(o => ([
+            String(o.id).padStart(5, '0'),
+            formatIndianDate(o.order_date),
+            o.salesman || '',
+            o.party || '',
+            o.type || '',
+            `${o.bill_type || ''} ${o.bill_no || ''}`.trim(),
+            o.status || '',
+            String(o.items_count || 0)
+        ]));
+        doc.autoTable({
+            head,
+            body,
+            styles: {
+                fontSize: 8
+            }
+        });
+        doc.save('orders.pdf');
+    }
 
-                                document.addEventListener('click', (e) => {
-                                    const dd = document.getElementById('partyDropdown');
-                                    if (!dd || dd.classList.contains('hidden')) return;
-                                    const inBtn = e.target.closest('#partyFilterBtn');
-                                    const inDd = e.target.closest('#partyDropdown');
-                                    if (!inBtn && !inDd) dd.classList.add('hidden');
-                                });
+    document.addEventListener('click', (e) => {
+        const dd = document.getElementById('partyDropdown');
+        if (!dd || dd.classList.contains('hidden')) return;
+        const inBtn = e.target.closest('#partyFilterBtn');
+        const inDd = e.target.closest('#partyDropdown');
+        if (!inBtn && !inDd) dd.classList.add('hidden');
+    });
 
-                                document.getElementById('searchInput').addEventListener('input', () => {
-                                    resetOrdersPage();
-                                    renderTable();
-                                });
+    document.getElementById('searchInput').addEventListener('input', () => {
+        resetOrdersPage();
+        renderTable();
+    });
 
-                                document.addEventListener('keydown', (e) => {
-                                    if (e.key === 'Escape') {
-                                        document.getElementById('partyDropdown')?.classList.add('hidden');
-                                        if (!document.getElementById('orderModal').classList.contains('hidden')) toggleModal('orderModal');
-                                        if (!document.getElementById('itemsModal').classList.contains('hidden')) toggleModal('itemsModal');
-                                        if (document.getElementById('editDrawer').classList.contains('open')) closeDrawer();
-                                    }
-                                });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            document.getElementById('partyDropdown')?.classList.add('hidden');
+            if (!document.getElementById('orderModal').classList.contains('hidden')) toggleModal('orderModal');
+            if (!document.getElementById('itemsModal').classList.contains('hidden')) toggleModal('itemsModal');
+            if (document.getElementById('editDrawer').classList.contains('open')) closeDrawer();
+        }
+    });
 
-                                (async () => {
-                                    const today = new Date().toISOString().slice(0, 10);
-                                    document.getElementById('newOrderDate').value = today;
-                                    await loadSalesmenForCreate();
-                                    await loadProductsForType('Fer');
-                                    await loadTransports();
-                                    await fetchOrders();
-                                })();
+    (async () => {
+        const today = new Date().toISOString().slice(0, 10);
+        document.getElementById('newOrderDate').value = today;
+        await loadSalesmenForCreate();
+        await loadProductsForType('Fer');
+        await loadTransports();
+        await fetchOrders();
+    })();
 </script>
 @endpush

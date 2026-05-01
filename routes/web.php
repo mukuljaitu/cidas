@@ -73,6 +73,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/banks/{bank}', [BankController::class, 'destroy'])->name('banks.destroy');
 
     Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
+    Route::get('/orders/receiving-file', [OrderController::class, 'receivingFile'])->name('orders.receiving-file');
     Route::get('/orders/api/list', [OrderController::class, 'apiList'])->name('orders.api.list');
     Route::get('/orders/api/details/{order}', [OrderController::class, 'apiDetails'])->name('orders.api.details');
     Route::post('/orders/api/items/bulk', [OrderController::class, 'apiItemsBulk'])->name('orders.api.items.bulk');

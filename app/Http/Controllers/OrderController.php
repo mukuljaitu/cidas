@@ -12,9 +12,45 @@ use App\Models\Variant;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class OrderController extends Controller
 {
+    public function receivingFile(Request $request)
+    {
+        $request->validate([
+            'path' => ['required', 'string', 'max:2000'],
+        ]);
+
+        $raw = trim($request->string('path')->toString());
+        $raw = ltrim($raw, '/');
+
+        if ($raw === '' || str_contains($raw, '://') || str_contains($raw, "\0") || str_contains($raw, '..')) {
+            abort(404);
+        }
+
+        if (str_starts_with($raw, 'storage/')) {
+            $raw = substr($raw, strlen('storage/'));
+        }
+
+        if (! str_starts_with($raw, 'uploads/receiving/')) {
+            abort(404);
+        }
+
+        $disk = Storage::disk('public');
+        if (! $disk->exists($raw)) {
+            abort(404);
+        }
+
+        $abs = $disk->path($raw);
+        $fileName = basename($raw);
+        $safeName = str_replace('"', '', (string) $fileName);
+
+        return response()->file($abs, [
+            'Content-Disposition' => 'inline; filename="' . $safeName . '"',
+        ]);
+    }
+
     private function billFiscalYearLabel(Carbon $date): string
     {
         $y = (int) $date->format('y');
