@@ -107,7 +107,7 @@ class TourController extends Controller
             $cities = collect(array_values($cityMap))
                 ->filter()
                 ->unique()
-                ->sortBy(fn ($c) => mb_strtolower($c))
+                ->sortBy(fn($c) => mb_strtolower($c))
                 ->values()
                 ->all();
 
@@ -130,6 +130,13 @@ class TourController extends Controller
     {
         $query = Tour::query();
 
+        $selectedState = trim($request->string('state')->toString());
+        $selectedStateNormalized = mb_strtolower($selectedState);
+        if ($selectedState === '' || $selectedStateNormalized === 'all' || $selectedStateNormalized === 'all states') {
+            $selectedState = 'All';
+        }
+        $stateFilter = $selectedState === 'All' ? null : $selectedState;
+
         if ($request->filled('name') && $request->name !== 'All') {
             $query->where('employee_name', $request->name);
         }
@@ -138,10 +145,8 @@ class TourController extends Controller
             $query->where('status', $request->status);
         }
 
-        if ($request->filled('state')) {
-            $query->where('state', $request->state);
-        } else {
-            $query->where('state', 'Punjab');
+        if ($stateFilter !== null) {
+            $query->where('state', $stateFilter);
         }
 
         $dateStart = $request->string('date_start')->toString();
@@ -201,14 +206,16 @@ class TourController extends Controller
 
         $tours = $query->orderBy('tour_date', 'desc')->paginate(15)->withQueryString();
 
-        $state = $request->string('state')->toString() ?: 'Punjab';
-        $names = Tour::query()
-            ->where('state', $state)
+        $namesQuery = Tour::query();
+        if ($stateFilter !== null) {
+            $namesQuery->where('state', $stateFilter);
+        }
+        $names = $namesQuery
             ->select('employee_name')
             ->distinct()
             ->orderBy('employee_name')
             ->pluck('employee_name')
-            ->map(fn ($n) => trim((string) $n))
+            ->map(fn($n) => trim((string) $n))
             ->filter()
             ->unique()
             ->values();
@@ -217,7 +224,7 @@ class TourController extends Controller
         $months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
         $employeeCityMap = [];
-        $salesmen = $this->salesmanEmployeesByState($state);
+        $salesmen = $this->salesmanEmployeesByState($stateFilter ?? '');
         $cityData = $this->salesmanCityData($salesmen);
         foreach ($cityData as $row) {
             $employeeCityMap[$row['employee']['name']] = $row['cities'];
@@ -332,7 +339,7 @@ class TourController extends Controller
         $cities = collect(array_values($cityMap))
             ->filter()
             ->unique()
-            ->sortBy(fn ($c) => mb_strtolower($c))
+            ->sortBy(fn($c) => mb_strtolower($c))
             ->values()
             ->all();
 
@@ -399,7 +406,7 @@ class TourController extends Controller
         $manualCities = City::query()
             ->where('employee_id', $employeeModel->id)
             ->pluck('city')
-            ->map(fn ($c) => trim((string) $c))
+            ->map(fn($c) => trim((string) $c))
             ->filter()
             ->values();
         $allowedCities = $partyCities
