@@ -465,6 +465,135 @@
     let itemsPrefetchToken = 0;
     let lastItemsPrefetchSearch = '';
 
+    const ORDERS_FILTER_STATE_KEY = 'orders.filters.v1';
+
+    function getOrdersNavigationType() {
+        try {
+            const entries = performance.getEntriesByType ? performance.getEntriesByType('navigation') : [];
+            const e = entries && entries.length ? entries[0] : null;
+            if (e && e.type) return e.type;
+        } catch (e) {}
+        try {
+            if (performance && performance.navigation && performance.navigation.type === 1) return 'reload';
+        } catch (e) {}
+        return 'navigate';
+    }
+
+    function clearOrdersFilterState() {
+        try {
+            sessionStorage.removeItem(ORDERS_FILTER_STATE_KEY);
+        } catch (e) {}
+    }
+
+    function saveOrdersFilterState() {
+        try {
+            const searchEl = document.getElementById('searchInput');
+            const state = {
+                status: currentFilterStatus,
+                category: currentFilterCategory,
+                billType: currentFilterBillType,
+                salesman: currentFilterSalesman,
+                party: currentFilterParty,
+                billNoSortDirection: billNoSortDirection,
+                search: searchEl ? (searchEl.value || '') : ''
+            };
+            sessionStorage.setItem(ORDERS_FILTER_STATE_KEY, JSON.stringify(state));
+        } catch (e) {}
+    }
+
+    function readOrdersFilterState() {
+        try {
+            const raw = sessionStorage.getItem(ORDERS_FILTER_STATE_KEY);
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            return parsed && typeof parsed === 'object' ? parsed : null;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function findStatusCard(status) {
+        const cards = document.querySelectorAll('.filter-card');
+        for (const card of cards) {
+            const oc = card.getAttribute('onclick') || '';
+            if (oc.includes(`filterByStatus('${status}'`)) return card;
+        }
+        return null;
+    }
+
+    function findCategoryButton(type) {
+        const btns = document.querySelectorAll('button[data-filter-group="category"]');
+        for (const btn of btns) {
+            const oc = btn.getAttribute('onclick') || '';
+            if (oc.includes(`filterByCategory('${type}'`)) return btn;
+        }
+        return null;
+    }
+
+    function findBillTypeButton(type) {
+        const btns = document.querySelectorAll('button[data-filter-group="billType"]');
+        for (const btn of btns) {
+            const oc = btn.getAttribute('onclick') || '';
+            if (oc.includes(`filterByBillType('${type}'`)) return btn;
+        }
+        return null;
+    }
+
+    function applyBillNoSortButtonState() {
+        const btn = document.getElementById('billNoSortBtn');
+        if (!btn) return;
+        if (billNoSortDirection) btn.classList.add('active-cat');
+        else btn.classList.remove('active-cat');
+    }
+
+    function restoreOrdersFilterState() {
+        const navType = getOrdersNavigationType();
+        if (navType === 'reload') {
+            clearOrdersFilterState();
+            return;
+        }
+
+        const state = readOrdersFilterState();
+        if (!state) return;
+
+        currentFilterStatus = typeof state.status === 'string' ? state.status : 'All';
+        currentFilterCategory = typeof state.category === 'string' ? state.category : 'All';
+        currentFilterBillType = typeof state.billType === 'string' ? state.billType : 'All';
+        currentFilterSalesman = typeof state.salesman === 'string' ? state.salesman : 'All';
+        currentFilterParty = typeof state.party === 'string' ? state.party : 'All';
+        billNoSortDirection = state.billNoSortDirection === 'asc' || state.billNoSortDirection === 'desc' ? state.billNoSortDirection : null;
+
+        const searchEl = document.getElementById('searchInput');
+        if (searchEl && typeof state.search === 'string') searchEl.value = state.search;
+
+        document.querySelectorAll('.filter-card').forEach(card => card.classList.remove('active-filter'));
+        const statusCard = findStatusCard(currentFilterStatus);
+        if (statusCard) statusCard.classList.add('active-filter');
+
+        const categoryBtn = findCategoryButton(currentFilterCategory);
+        if (categoryBtn) setActiveButton('category', categoryBtn);
+
+        const billBtn = findBillTypeButton(currentFilterBillType);
+        if (billBtn) setActiveButton('billType', billBtn);
+
+        const salesmanSelect = document.getElementById('salesmanFilter');
+        if (salesmanSelect) {
+            const has = Array.from(salesmanSelect.options || []).some(o => o.value === currentFilterSalesman);
+            if (has) salesmanSelect.value = currentFilterSalesman;
+            else {
+                salesmanSelect.value = 'All';
+                currentFilterSalesman = 'All';
+            }
+        }
+
+        const partyLabel = document.getElementById('partyFilterLabel');
+        if (partyLabel) partyLabel.innerText = currentFilterParty === 'All' ? 'All Parties' : currentFilterParty;
+
+        applyBillNoSortButtonState();
+        resetOrdersPage();
+        renderTable();
+    }
+
     let newOrderBillType = 'A';
     let newOrderType = 'Fer';
     let newOrderItems = [];
@@ -553,6 +682,7 @@
         document.querySelectorAll('.filter-card').forEach(card => card.classList.remove('active-filter'));
         if (element) element.classList.add('active-filter');
         resetOrdersPage();
+        saveOrdersFilterState();
         renderTable();
     }
 
@@ -560,6 +690,7 @@
         currentFilterCategory = type;
         setActiveButton('category', btn);
         resetOrdersPage();
+        saveOrdersFilterState();
         renderTable();
     }
 
@@ -567,12 +698,14 @@
         currentFilterBillType = type;
         setActiveButton('billType', btn);
         resetOrdersPage();
+        saveOrdersFilterState();
         renderTable();
     }
 
     function filterBySalesman(val) {
         currentFilterSalesman = val || 'All';
         resetOrdersPage();
+        saveOrdersFilterState();
         renderTable();
     }
 
@@ -581,6 +714,7 @@
         document.getElementById('partyFilterLabel').innerText = label || 'All Parties';
         document.getElementById('partyDropdown').classList.add('hidden');
         resetOrdersPage();
+        saveOrdersFilterState();
         renderTable();
     }
 
@@ -643,7 +777,9 @@
         if (!billNoSortDirection) billNoSortDirection = 'asc';
         else if (billNoSortDirection === 'asc') billNoSortDirection = 'desc';
         else billNoSortDirection = null;
+        applyBillNoSortButtonState();
         resetOrdersPage();
+        saveOrdersFilterState();
         renderTable();
     }
 
@@ -1515,6 +1651,7 @@
 
     document.getElementById('searchInput').addEventListener('input', () => {
         resetOrdersPage();
+        saveOrdersFilterState();
         renderTable();
     });
 
@@ -1534,6 +1671,8 @@
         await loadProductsForType('Fer');
         await loadTransports();
         await fetchOrders();
+        restoreOrdersFilterState();
+        saveOrdersFilterState();
     })();
 </script>
 @endpush
