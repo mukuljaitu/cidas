@@ -123,10 +123,10 @@
             <button data-filter-group="category" style="--active-bg:#0ea5e9;--active-fg:#ffffff;--active-shadow:0 4px 12px rgba(14,165,233,0.25);" onclick="filterByCategory('Pes', this)" class="cat-filter-btn px-6 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2">
                 <i class="fas fa-flask text-blue-500"></i> Pesticides
             </button>
-            <button data-filter-group="billType" style="--active-bg:#f59e0b;--active-fg:#111827;--active-icon:#111827;--active-shadow:0 4px 12px rgba(245,158,11,0.25);" onclick="filterByBillType('A', this)" class="cat-filter-btn px-6 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2">
+            <button id="billTypeABtn" data-filter-group="billType" style="--active-bg:#f59e0b;--active-fg:#111827;--active-icon:#111827;--active-shadow:0 4px 12px rgba(245,158,11,0.25);" onclick="filterByBillType('A', this)" class="cat-filter-btn px-6 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2">
                 Type A
             </button>
-            <button data-filter-group="billType" style="--active-bg:#7c3aed;--active-fg:#ffffff;--active-shadow:0 4px 12px rgba(124,58,237,0.25);" onclick="filterByBillType('B', this)" class="cat-filter-btn px-6 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2">
+            <button id="billTypeBBtn" data-filter-group="billType" style="--active-bg:#7c3aed;--active-fg:#ffffff;--active-shadow:0 4px 12px rgba(124,58,237,0.25);" onclick="filterByBillType('B', this)" class="cat-filter-btn px-6 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2">
                 Type B
             </button>
             <button data-filter-group="category" style="--active-bg:#e11d48;--active-fg:#ffffff;--active-shadow:0 4px 12px rgba(225,29,72,0.25);" id="missingFilesBtn" onclick="filterByCategory('MissingFiles', this)" class="cat-filter-btn px-6 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 text-red-600 hover:bg-red-50">
@@ -546,6 +546,61 @@
         else btn.classList.remove('active-cat');
     }
 
+    function normalizeOrdersBillType(v) {
+        const val = (v || '').toString();
+        return val === 'A' || val === 'B' || val === 'All' ? val : 'All';
+    }
+
+    function normalizeOrdersCategory(v) {
+        const val = (v || '').toString();
+        return val === 'All' || val === 'Fer' || val === 'Pes' || val === 'MissingFiles' ? val : 'All';
+    }
+
+    function normalizeOrdersStatus(v) {
+        const val = (v || '').toString();
+        return val === 'All' || val === 'Incomplete' || val === 'Finalized' || val === 'Received' || val === 'Okay' || val === 'Cancelled' ? val : 'All';
+    }
+
+    function syncOrdersFilterUi() {
+        currentFilterStatus = normalizeOrdersStatus(currentFilterStatus);
+        currentFilterCategory = normalizeOrdersCategory(currentFilterCategory);
+        currentFilterBillType = normalizeOrdersBillType(currentFilterBillType);
+        currentFilterSalesman = (currentFilterSalesman || 'All').toString();
+        currentFilterParty = (currentFilterParty || 'All').toString();
+
+        document.querySelectorAll('.filter-card').forEach(card => card.classList.remove('active-filter'));
+        const statusCard = findStatusCard(currentFilterStatus);
+        if (statusCard) statusCard.classList.add('active-filter');
+
+        const categoryBtn = findCategoryButton(currentFilterCategory);
+        if (categoryBtn) setActiveButton('category', categoryBtn);
+
+        const billGroupBtns = document.querySelectorAll('button[data-filter-group="billType"]');
+        billGroupBtns.forEach(b => b.classList.remove('active-cat'));
+        if (currentFilterBillType === 'A') {
+            const btn = document.getElementById('billTypeABtn') || findBillTypeButton('A');
+            if (btn) btn.classList.add('active-cat');
+        } else if (currentFilterBillType === 'B') {
+            const btn = document.getElementById('billTypeBBtn') || findBillTypeButton('B');
+            if (btn) btn.classList.add('active-cat');
+        }
+
+        const salesmanSelect = document.getElementById('salesmanFilter');
+        if (salesmanSelect) {
+            const has = Array.from(salesmanSelect.options || []).some(o => o.value === currentFilterSalesman);
+            if (has) salesmanSelect.value = currentFilterSalesman;
+            else {
+                salesmanSelect.value = 'All';
+                currentFilterSalesman = 'All';
+            }
+        }
+
+        const partyLabel = document.getElementById('partyFilterLabel');
+        if (partyLabel) partyLabel.innerText = currentFilterParty === 'All' ? 'All Parties' : currentFilterParty;
+
+        applyBillNoSortButtonState();
+    }
+
     function restoreOrdersFilterState() {
         const navType = getOrdersNavigationType();
         if (navType === 'reload') {
@@ -566,30 +621,7 @@
         const searchEl = document.getElementById('searchInput');
         if (searchEl && typeof state.search === 'string') searchEl.value = state.search;
 
-        document.querySelectorAll('.filter-card').forEach(card => card.classList.remove('active-filter'));
-        const statusCard = findStatusCard(currentFilterStatus);
-        if (statusCard) statusCard.classList.add('active-filter');
-
-        const categoryBtn = findCategoryButton(currentFilterCategory);
-        if (categoryBtn) setActiveButton('category', categoryBtn);
-
-        const billBtn = findBillTypeButton(currentFilterBillType);
-        if (billBtn) setActiveButton('billType', billBtn);
-
-        const salesmanSelect = document.getElementById('salesmanFilter');
-        if (salesmanSelect) {
-            const has = Array.from(salesmanSelect.options || []).some(o => o.value === currentFilterSalesman);
-            if (has) salesmanSelect.value = currentFilterSalesman;
-            else {
-                salesmanSelect.value = 'All';
-                currentFilterSalesman = 'All';
-            }
-        }
-
-        const partyLabel = document.getElementById('partyFilterLabel');
-        if (partyLabel) partyLabel.innerText = currentFilterParty === 'All' ? 'All Parties' : currentFilterParty;
-
-        applyBillNoSortButtonState();
+        syncOrdersFilterUi();
         resetOrdersPage();
         renderTable();
     }
@@ -655,10 +687,11 @@
         });
         const data = await res.json();
         ordersData = Array.isArray(data) ? data : [];
-        renderTable();
         updateStats();
         populateSalesmanFilterFromOrders();
         populatePartyFilterFromOrders();
+        syncOrdersFilterUi();
+        renderTable();
     }
 
     function updateStats() {
