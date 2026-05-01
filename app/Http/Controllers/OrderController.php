@@ -42,12 +42,15 @@ class OrderController extends Controller
             abort(404);
         }
 
-        $abs = $disk->path($raw);
         $fileName = basename($raw);
         $safeName = str_replace('"', '', (string) $fileName);
 
-        return response()->file($abs, [
-            'Content-Disposition' => 'inline; filename="' . $safeName . '"',
+        $ext = mb_strtolower((string) pathinfo($raw, PATHINFO_EXTENSION));
+        $inlineExts = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'pdf'];
+        $disposition = in_array($ext, $inlineExts, true) ? 'inline' : 'attachment';
+
+        return $disk->response($raw, $safeName, [
+            'Content-Disposition' => $disposition . '; filename="' . $safeName . '"',
         ]);
     }
 
