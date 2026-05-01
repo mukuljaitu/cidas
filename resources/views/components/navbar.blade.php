@@ -8,6 +8,7 @@ $analyseItems = [
 ['label' => 'View Tours', 'url' => route('tours.index'), 'active' => request()->is('view-tours*')],
 ['label' => 'Employee Analyzer', 'url' => route('employees.analyze'), 'active' => request()->is('view-employees*')],
 ['label' => 'Order Analyzer', 'url' => route('orders.analyze'), 'active' => request()->is('view-orders*')],
+['label' => 'City Intelligence', 'url' => route('cities.analyze'), 'active' => request()->is('view-city-intelligence*')],
 ];
 
 $assetsItems = [

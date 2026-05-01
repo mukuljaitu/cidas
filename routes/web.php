@@ -65,6 +65,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/view-orders', [OrderController::class, 'analyze'])->name('orders.analyze');
 
+    Route::get('/view-city-intelligence', [CityController::class, 'analyze'])->name('cities.analyze');
+
     Route::get('/banks', [BankController::class, 'index'])->name('banks.index');
     Route::post('/banks', [BankController::class, 'store'])->name('banks.store');
     Route::put('/banks/{bank}', [BankController::class, 'update'])->name('banks.update');
@@ -97,4 +99,4 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-require __DIR__.'/auth.php';
+require __DIR__ . '/auth.php';
