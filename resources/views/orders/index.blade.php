@@ -887,19 +887,95 @@
         }
     }
 
+    function fileUrl(path) {
+        const p = (path || '').toString();
+        if (!p) return '';
+        return p.startsWith('/') ? p : `/${p}`;
+    }
+
+    function fileNameFromPath(path) {
+        const p = (path || '').toString();
+        if (!p) return '';
+        const normalized = p.replace(/\\/g, '/');
+        const parts = normalized.split('/');
+        return parts.length ? (parts[parts.length - 1] || '') : normalized;
+    }
+
+    function isImagePath(path) {
+        const p = (path || '').toString().toLowerCase();
+        return /\.(png|jpe?g|gif|webp)$/i.test(p);
+    }
+
+    function viewReceivingFile(path) {
+        const url = fileUrl(path);
+        if (!url) return;
+        window.open(url, '_blank', 'noopener');
+    }
+
     function renderImageGrid(images) {
         const grid = document.getElementById('imageGrid');
         grid.innerHTML = '';
+
         images.forEach((path, index) => {
-            const div = document.createElement('div');
-            div.className = 'relative aspect-square rounded-lg border border-gray-200 overflow-hidden group';
-            div.innerHTML = `
-                <img src="/${path}" class="w-full h-full object-cover">
-                <button type="button" onclick="removeExistingImage(${index})" class="absolute inset-0 bg-red-600/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <i class="fas fa-trash text-white"></i>
-                </button>
-            `;
-            grid.appendChild(div);
+            const tile = document.createElement('div');
+            tile.className = 'relative aspect-square rounded-lg border border-gray-200 overflow-hidden group bg-white';
+
+            const previewWrap = document.createElement('div');
+            previewWrap.className = 'w-full h-full flex items-center justify-center';
+
+            if (isImagePath(path)) {
+                const img = document.createElement('img');
+                img.src = fileUrl(path);
+                img.className = 'w-full h-full object-cover';
+                img.alt = fileNameFromPath(path) || 'Receiving proof';
+                previewWrap.appendChild(img);
+            } else {
+                const placeholder = document.createElement('div');
+                placeholder.className = 'w-full h-full flex flex-col items-center justify-center gap-2 bg-gray-50';
+
+                const icon = document.createElement('i');
+                icon.className = 'fas fa-file text-gray-300 text-3xl';
+
+                const name = document.createElement('div');
+                name.className = 'px-2 text-[11px] font-semibold text-gray-500 text-center break-words';
+                name.innerText = fileNameFromPath(path) || 'File';
+
+                placeholder.appendChild(icon);
+                placeholder.appendChild(name);
+                previewWrap.appendChild(placeholder);
+            }
+
+            const actions = document.createElement('div');
+            actions.className = 'absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2';
+
+            const viewBtn = document.createElement('button');
+            viewBtn.type = 'button';
+            viewBtn.className = 'w-10 h-10 rounded-xl bg-white/90 hover:bg-white text-gray-800 flex items-center justify-center shadow-sm';
+            viewBtn.title = 'View';
+            viewBtn.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                viewReceivingFile(path);
+            };
+            viewBtn.innerHTML = '<i class="fas fa-eye"></i>';
+
+            const delBtn = document.createElement('button');
+            delBtn.type = 'button';
+            delBtn.className = 'w-10 h-10 rounded-xl bg-red-600 hover:bg-red-700 text-white flex items-center justify-center shadow-sm';
+            delBtn.title = 'Delete';
+            delBtn.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                removeExistingImage(index);
+            };
+            delBtn.innerHTML = '<i class="fas fa-trash"></i>';
+
+            actions.appendChild(viewBtn);
+            actions.appendChild(delBtn);
+
+            tile.appendChild(previewWrap);
+            tile.appendChild(actions);
+            grid.appendChild(tile);
         });
     }
 
