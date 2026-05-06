@@ -27,84 +27,83 @@
 
     <x-slot name="tbody">
         @forelse($employees as $employee)
-            @php
-            $mobile = $employee->mobile;
-            $status = $employee->status ?? 'Active';
-            $statusLower = strtolower((string) $status);
-            $dotColor = 'bg-green-500';
-            if (str_contains($statusLower, 'away') || str_contains($statusLower, 'leave')) $dotColor = 'bg-orange-500';
-            elseif (str_contains($statusLower, 'holiday')) $dotColor = 'bg-blue-500';
-            
-            $initials = strtoupper(substr($employee->name, 0, 1));
-            $roleId = $employee->role_id ?? ($employee->roles->first()->id ?? null);
-            $roleIdsCsv = $employee->roles->pluck('id')->implode(',');
-            @endphp
-            <tr id="row-{{ $employee->id }}" class="hover:bg-gray-50/50 transition-colors">
-                <td class="px-6 py-4">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-500 font-bold border border-gray-200">
-                            {{ $initials }}
-                        </div>
-                        <div>
-                            <div class="text-sm font-bold text-gray-900">{{ $employee->name }}</div>
-                            <div class="text-xs text-gray-400 font-medium">ID - {{ $employee->display_id ?? $employee->id }}</div>
-                        </div>
+        @php
+        $mobile = $employee->mobile;
+        $status = $employee->status ?? 'Active';
+        $statusLower = strtolower((string) $status);
+        $dotColor = 'bg-green-500';
+        if (str_contains($statusLower, 'away') || str_contains($statusLower, 'leave')) $dotColor = 'bg-orange-500';
+        elseif (str_contains($statusLower, 'holiday')) $dotColor = 'bg-blue-500';
+
+        $initials = strtoupper(substr($employee->name, 0, 1));
+        $roleId = $employee->role_id ?? ($employee->roles->first()->id ?? null);
+        $roleIdsCsv = $employee->roles->pluck('id')->implode(',');
+        @endphp
+        <tr id="row-{{ $employee->id }}" class="hover:bg-gray-50/50 transition-colors">
+            <td class="px-6 py-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-500 font-bold border border-gray-200">
+                        {{ $initials }}
                     </div>
-                </td>
-                <td class="px-6 py-4">
-                    <div class="text-sm font-bold text-gray-900">{{ $mobile ?: '—' }}</div>
-                    <div class="text-xs text-gray-400 font-medium">{{ $employee->city ?: 'Location unknown' }}</div>
-                </td>
-                <td class="px-6 py-4">
-                    <div class="flex flex-wrap gap-1">
-                        @foreach($employee->roles as $role)
-                            <span class="px-2.5 py-1 rounded-md bg-blue-50 text-[10px] font-bold text-blue-600 uppercase tracking-wider border border-blue-100/50">
-                                {{ $role->name }}
-                            </span>
-                        @endforeach
-                        @if($employee->roles->isEmpty())
-                            <span class="text-sm text-gray-400">—</span>
-                        @endif
+                    <div>
+                        <div class="text-sm font-bold text-gray-900">{{ $employee->name }}</div>
+                        <div class="text-xs text-gray-400 font-medium">ID - {{ $employee->display_id ?? $employee->id }}</div>
                     </div>
-                </td>
-                <td class="px-6 py-4">
-                    <div class="flex items-center gap-2">
-                        <span class="w-2 h-2 rounded-full {{ $dotColor }}"></span>
-                        <span class="text-sm font-semibold text-gray-700">{{ $status }}</span>
-                    </div>
-                </td>
-                <td class="px-6 py-4 text-right">
-                    <button
-                        type="button"
-                        class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-all"
-                        data-edit-member-trigger
-                        data-id="{{ $employee->id }}"
-                        data-name="{{ $employee->name }}"
-                        data-mobile="{{ $employee->mobile }}"
-                        data-city="{{ $employee->city }}"
-                        data-state="{{ $employee->state }}"
-                        data-pin_code="{{ $employee->pin_code }}"
-                        data-date_of_joining="{{ optional($employee->date_of_joining)->format('Y-m-d') }}"
-                        data-role-id="{{ $roleId }}"
-                        data-role_ids="{{ $roleIdsCsv }}"
-                    >
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path>
-                        </svg>
-                    </button>
-                </td>
-            </tr>
+                </div>
+            </td>
+            <td class="px-6 py-4">
+                <div class="text-sm font-bold text-gray-900">{{ $mobile ?: '—' }}</div>
+                <div class="text-xs text-gray-400 font-medium">{{ $employee->city ?: 'Location unknown' }}</div>
+            </td>
+            <td class="px-6 py-4">
+                <div class="flex flex-wrap gap-1">
+                    @foreach($employee->roles as $role)
+                    <span class="px-2.5 py-1 rounded-md bg-blue-50 text-[10px] font-bold text-blue-600 uppercase tracking-wider border border-blue-100/50">
+                        {{ $role->name }}
+                    </span>
+                    @endforeach
+                    @if($employee->roles->isEmpty())
+                    <span class="text-sm text-gray-400">—</span>
+                    @endif
+                </div>
+            </td>
+            <td class="px-6 py-4">
+                <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full {{ $dotColor }}"></span>
+                    <span class="text-sm font-semibold text-gray-700">{{ $status }}</span>
+                </div>
+            </td>
+            <td class="px-6 py-4 text-right">
+                <button
+                    type="button"
+                    class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-all"
+                    data-edit-member-trigger
+                    data-id="{{ $employee->id }}"
+                    data-name="{{ $employee->name }}"
+                    data-mobile="{{ $employee->mobile }}"
+                    data-city="{{ $employee->city }}"
+                    data-state="{{ $employee->state }}"
+                    data-pin_code="{{ $employee->pin_code }}"
+                    data-date_of_joining="{{ optional($employee->date_of_joining)->format('Y-m-d') }}"
+                    data-role-id="{{ $roleId }}"
+                    data-role_ids="{{ $roleIdsCsv }}">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path>
+                    </svg>
+                </button>
+            </td>
+        </tr>
         @empty
-            <tr>
-                <td colspan="5" class="px-6 py-12 text-center">
-                    <div class="flex flex-col items-center gap-2 text-gray-400">
-                        <svg class="w-12 h-12 opacity-20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
-                        </svg>
-                        <span class="text-sm font-medium">No members found</span>
-                    </div>
-                </td>
-            </tr>
+        <tr>
+            <td colspan="5" class="px-6 py-12 text-center">
+                <div class="flex flex-col items-center gap-2 text-gray-400">
+                    <svg class="w-12 h-12 opacity-20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+                    </svg>
+                    <span class="text-sm font-medium">No members found</span>
+                </div>
+            </td>
+        </tr>
         @endforelse
     </x-slot>
 
@@ -115,14 +114,16 @@
                 <div class="flex items-center justify-between mb-8">
                     <h2 class="text-2xl font-bold text-gray-900" id="panelTitle">New</h2>
                     <button type="button" data-add-member-cancel class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-lg transition-all">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
                     </button>
                 </div>
 
                 <form id="memberForm" method="POST" action="{{ url('/employees') }}" class="space-y-6">
                     @csrf
                     <input type="hidden" name="_method" value="">
-                    
+
                     <div class="space-y-4">
                         <div class="space-y-1.5">
                             <label class="text-sm font-semibold text-gray-700">Full Name</label>
@@ -138,7 +139,7 @@
                             <label class="text-sm font-semibold text-gray-700">Role</label>
                             <select name="role_id" required class="block w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all appearance-none">
                                 @foreach(($roleOptions ?? []) as $role)
-                                    <option value="{{ $role->id }}">{{ $role->name }}</option>
+                                <option value="{{ $role->id }}">{{ $role->name }}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -154,29 +155,33 @@
                             <div class="text-xs font-bold text-gray-400 uppercase tracking-wider">Additional Roles</div>
                             <div class="mt-3 grid grid-cols-2 gap-3">
                                 @foreach(($roleOptions ?? []) as $role)
-                                    <label class="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-semibold text-gray-700">
-                                        <input type="checkbox" class="multi-role-checkbox w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500" name="role_ids[]" value="{{ $role->id }}">
-                                        <span>{{ $role->name }}</span>
-                                    </label>
+                                <label class="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-semibold text-gray-700">
+                                    <input type="checkbox" class="multi-role-checkbox w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500" name="role_ids[]" value="{{ $role->id }}">
+                                    <span>{{ $role->name }}</span>
+                                </label>
                                 @endforeach
                             </div>
                         </div>
 
                         <div class="grid grid-cols-2 gap-4">
                             <div class="space-y-1.5">
-                                <label class="text-sm font-semibold text-gray-700">City</label>
-                                <input name="city" type="text" class="block w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" placeholder="City" />
+                                <label class="text-sm font-semibold text-gray-700">State</label>
+                                <select name="state" id="emp_state" class="block w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all appearance-none">
+                                    <option value="">Select State</option>
+                                    <option value="Punjab">Punjab</option>
+                                    <option value="Rajasthan">Rajasthan</option>
+                                </select>
                             </div>
                             <div class="space-y-1.5">
-                                <label class="text-sm font-semibold text-gray-700">State</label>
-                                <input name="state" type="text" class="block w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" placeholder="State" />
+                                <label class="text-sm font-semibold text-gray-700">Pin Code</label>
+                                <input name="pin_code" id="emp_pin_code" type="text" class="block w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" placeholder="Pincode" />
                             </div>
                         </div>
 
                         <div class="grid grid-cols-2 gap-4">
                             <div class="space-y-1.5">
-                                <label class="text-sm font-semibold text-gray-700">Pin Code</label>
-                                <input name="pin_code" type="text" class="block w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" placeholder="Pincode" />
+                                <label class="text-sm font-semibold text-gray-700">City</label>
+                                <input name="city" id="emp_city" type="text" class="block w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" placeholder="City" />
                             </div>
                             <div class="space-y-1.5">
                                 <label class="text-sm font-semibold text-gray-700">Joining Date</label>
@@ -193,9 +198,11 @@
                             Cancel
                         </button>
                     </div>
-                    
+
                     <button type="button" data-delete-member class="w-full mt-4 px-6 py-3 bg-red-50 text-red-600 font-bold rounded-xl hover:bg-red-100 transition-all flex items-center justify-center gap-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
                         Delete Member
                     </button>
                 </form>
@@ -314,6 +321,82 @@
                         target.checked = true;
                     }
                     setSummary();
+                }
+            });
+        }
+
+        const pinCodeInput = document.getElementById('emp_pin_code');
+        const cityInput = document.getElementById('emp_city');
+        const stateSelect = document.getElementById('emp_state');
+
+        if (pinCodeInput && cityInput && stateSelect) {
+            let isFetching = false;
+
+            async function fetchByPincode(pincode) {
+                if (pincode.length !== 6 || isFetching) return;
+                isFetching = true;
+                try {
+                    const response = await fetch(`https://api.postalpincode.in/pincode/${pincode}`);
+                    const data = await response.json();
+                    if (data[0].Status === 'Success') {
+                        const postOffice = data[0].PostOffice[0];
+                        cityInput.value = postOffice.Name || postOffice.Block || '';
+                        const state = postOffice.State;
+                        if (state === 'Punjab' || state === 'Rajasthan') {
+                            stateSelect.value = state;
+                        } else {
+                            Array.from(stateSelect.options).forEach(opt => {
+                                if (opt.value.toLowerCase() === state.toLowerCase()) {
+                                    stateSelect.value = opt.value;
+                                }
+                            });
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error fetching pincode data:', error);
+                } finally {
+                    isFetching = false;
+                }
+            }
+
+            async function fetchByCity(city) {
+                if (city.length < 3 || isFetching) return;
+                isFetching = true;
+                try {
+                    const response = await fetch(`https://api.postalpincode.in/postoffice/${city}`);
+                    const data = await response.json();
+                    if (data[0].Status === 'Success') {
+                        const postOffice = data[0].PostOffice[0];
+                        pinCodeInput.value = postOffice.Pincode || '';
+                        const state = postOffice.State;
+                        if (state === 'Punjab' || state === 'Rajasthan') {
+                            stateSelect.value = state;
+                        } else {
+                            Array.from(stateSelect.options).forEach(opt => {
+                                if (opt.value.toLowerCase() === state.toLowerCase()) {
+                                    stateSelect.value = opt.value;
+                                }
+                            });
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error fetching city data:', error);
+                } finally {
+                    isFetching = false;
+                }
+            }
+
+            pinCodeInput.addEventListener('input', (e) => {
+                const val = e.target.value.trim();
+                if (val.length === 6) {
+                    fetchByPincode(val);
+                }
+            });
+
+            cityInput.addEventListener('blur', (e) => {
+                const val = e.target.value.trim();
+                if (val.length >= 3 && pinCodeInput.value.trim() === '') {
+                    fetchByCity(val);
                 }
             });
         }

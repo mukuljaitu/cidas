@@ -416,20 +416,24 @@
 
                     <div class="grid grid-cols-4 gap-4">
                         <div class="space-y-1.5">
-                            <label class="text-sm font-semibold text-gray-700">City</label>
-                            <input name="city" type="text" class="block w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
-                        </div>
-                        <div class="space-y-1.5">
-                            <label class="text-sm font-semibold text-gray-700">District</label>
-                            <input name="district" type="text" class="block w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
-                        </div>
-                        <div class="space-y-1.5">
                             <label class="text-sm font-semibold text-gray-700">State</label>
-                            <input name="state" type="text" class="block w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
+                            <select name="state" id="party_state" class="block w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
+                                <option value="">Select State</option>
+                                <option value="Punjab">Punjab</option>
+                                <option value="Rajasthan">Rajasthan</option>
+                            </select>
                         </div>
                         <div class="space-y-1.5">
                             <label class="text-sm font-semibold text-gray-700">Pin Code</label>
-                            <input name="pin_code" type="text" class="block w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
+                            <input name="pin_code" id="party_pin_code" type="text" class="block w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
+                        </div>
+                        <div class="space-y-1.5">
+                            <label class="text-sm font-semibold text-gray-700">City</label>
+                            <input name="city" id="party_city" type="text" class="block w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
+                        </div>
+                        <div class="space-y-1.5">
+                            <label class="text-sm font-semibold text-gray-700">District</label>
+                            <input name="district" id="party_district" type="text" class="block w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
                         </div>
                     </div>
 
@@ -575,6 +579,87 @@
             } catch {}
         }
     })();
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const pinCodeInput = document.getElementById('party_pin_code');
+        const cityInput = document.getElementById('party_city');
+        const districtInput = document.getElementById('party_district');
+        const stateSelect = document.getElementById('party_state');
+
+        if (!pinCodeInput || !cityInput || !districtInput || !stateSelect) return;
+
+        let isFetching = false;
+
+        async function fetchByPincode(pincode) {
+            if (pincode.length !== 6 || isFetching) return;
+            isFetching = true;
+            try {
+                const response = await fetch(`https://api.postalpincode.in/pincode/${pincode}`);
+                const data = await response.json();
+                if (data[0].Status === 'Success') {
+                    const postOffice = data[0].PostOffice[0];
+                    cityInput.value = postOffice.Name || postOffice.Block || '';
+                    districtInput.value = postOffice.District || '';
+                    const state = postOffice.State;
+                    if (state === 'Punjab' || state === 'Rajasthan') {
+                        stateSelect.value = state;
+                    } else {
+                        Array.from(stateSelect.options).forEach(opt => {
+                            if (opt.value.toLowerCase() === state.toLowerCase()) {
+                                stateSelect.value = opt.value;
+                            }
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching pincode data:', error);
+            } finally {
+                isFetching = false;
+            }
+        }
+
+        async function fetchByCity(city) {
+            if (city.length < 3 || isFetching) return;
+            isFetching = true;
+            try {
+                const response = await fetch(`https://api.postalpincode.in/postoffice/${city}`);
+                const data = await response.json();
+                if (data[0].Status === 'Success') {
+                    const postOffice = data[0].PostOffice[0];
+                    pinCodeInput.value = postOffice.Pincode || '';
+                    districtInput.value = postOffice.District || '';
+                    const state = postOffice.State;
+                    if (state === 'Punjab' || state === 'Rajasthan') {
+                        stateSelect.value = state;
+                    } else {
+                        Array.from(stateSelect.options).forEach(opt => {
+                            if (opt.value.toLowerCase() === state.toLowerCase()) {
+                                stateSelect.value = opt.value;
+                            }
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching city data:', error);
+            } finally {
+                isFetching = false;
+            }
+        }
+
+        pinCodeInput.addEventListener('input', (e) => {
+            const val = e.target.value.trim();
+            if (val.length === 6) {
+                fetchByPincode(val);
+            }
+        });
+
+        cityInput.addEventListener('blur', (e) => {
+            const val = e.target.value.trim();
+            if (val.length >= 3 && pinCodeInput.value.trim() === '') {
+                fetchByCity(val);
+            }
+        });
+    });
 </script>
 @endpush
 
