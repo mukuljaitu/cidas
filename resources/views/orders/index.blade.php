@@ -182,7 +182,7 @@
             <table class="w-full text-left border-collapse">
                 <thead class="sticky top-0 bg-white/95 backdrop-blur-sm z-10 border-b">
                     <tr class="text-gray-400 text-xs font-bold uppercase tracking-wider">
-                        <th class="px-6 py-4">Order Details</th>
+                        <th class="px-6 py-4">Date</th>
                         <th class="px-6 py-4">Party / Salesman</th>
                         <th class="px-6 py-4">Items</th>
                         <th class="px-6 py-4">Billing Info</th>
@@ -657,6 +657,17 @@
         });
     }
 
+    function formatLongDate(input) {
+        if (!input) return '';
+        const d = new Date(input);
+        if (Number.isNaN(d.getTime())) return '';
+        return d.toLocaleDateString('en-US', {
+            month: 'long',
+            day: 'numeric',
+            year: 'numeric'
+        });
+    }
+
     function normalizeImages(v) {
         if (!v) return [];
         if (Array.isArray(v)) return v.filter(Boolean);
@@ -969,8 +980,7 @@
             return `
                 <tr class="order-row border-b last:border-0" onclick="openDrawer(${o.id})">
                     <td class="px-6 py-4">
-                        <p class="font-bold text-sm">#${String(o.id).padStart(5, '0')}</p>
-                        <p class="text-xs text-gray-500">${formatIndianDate(o.order_date)}</p>
+                        <p class="font-bold text-sm">${formatLongDate(o.order_date)}</p>
                     </td>
                     <td class="px-6 py-4">
                         <p class="font-semibold">${o.party || ''}</p>
