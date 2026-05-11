@@ -602,12 +602,6 @@
     }
 
     function restoreOrdersFilterState() {
-        const navType = getOrdersNavigationType();
-        if (navType === 'reload') {
-            clearOrdersFilterState();
-            return;
-        }
-
         const state = readOrdersFilterState();
         if (!state) return;
 
@@ -624,6 +618,7 @@
         syncOrdersFilterUi();
         resetOrdersPage();
         renderTable();
+        saveOrdersFilterState();
     }
 
     let newOrderBillType = 'A';
@@ -1181,6 +1176,7 @@
             const data = await response.json();
             if (data && data.success) {
                 closeDrawer();
+                saveOrdersFilterState();
                 await fetchOrders();
             } else {
                 alert(data && data.error ? data.error : 'Update failed');
